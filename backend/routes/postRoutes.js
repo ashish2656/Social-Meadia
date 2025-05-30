@@ -18,32 +18,70 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   fileFilter: function(req, file, cb) {
+    // Check file type
     if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-      return cb(new Error('Only image files are allowed!'), false);
+      return cb(new Error('Only image files (jpg, jpeg, png, gif) are allowed!'), false);
     }
     cb(null, true);
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
-});
+}).single('image');
 
 // Create post
-router.post('/', protect, upload.single('image'), async (req, res) => {
-  try {
-    const { caption } = req.body;
-    
-    if (!req.file) {
-      return res.status(400).json({ message: 'Please upload an image' });
+router.post('/', protect, (req, res) => {
+  upload(req, res, async function(err) {
+    try {
+      if (err instanceof multer.MulterError) {
+        // A Multer error occurred when uploading
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ 
+            message: 'File too large',
+            details: 'Maximum file size is 5MB'
+          });
+        }
+        return res.status(400).json({ 
+          message: 'File upload error',
+          details: err.message
+        });
+      } else if (err) {
+        // An unknown error occurred
+        return res.status(400).json({ 
+          message: 'File upload error',
+          details: err.message
+        });
+      }
+
+      // Check if file was provided
+      if (!req.file) {
+        return res.status(400).json({ 
+          message: 'Please upload an image',
+          details: 'No file was uploaded'
+        });
+      }
+
+      const { caption } = req.body;
+
+      const post = await Post.create({
+        user: req.user.id,
+        image: req.file.filename,
+        caption: caption || ''
+      });
+
+      res.status(201).json(post);
+    } catch (error) {
+      console.error('Post creation error:', {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user?._id
+      });
+      res.status(500).json({ 
+        message: 'Error creating post',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
-
-    const post = await Post.create({
-      user: req.user.id,
-      image: req.file.filename,
-      caption
-    });
-
-    res.status(201).json(post);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+  });
 });
 
 // Get feed posts

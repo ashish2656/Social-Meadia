@@ -3,12 +3,19 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 dotenv.config();
 
 // Create Express app
 const app = express();
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Middleware
 app.use(cors({
@@ -17,8 +24,24 @@ app.use(cors({
     : ['http://localhost:8080', 'http://127.0.0.1:8080'],
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Handle JSON and URL-encoded data for non-multipart requests
+app.use((req, res, next) => {
+  if (!req.is('multipart/form-data')) {
+    express.json()(req, res, next);
+  } else {
+    next();
+  }
+});
+app.use((req, res, next) => {
+  if (!req.is('multipart/form-data')) {
+    express.urlencoded({ extended: true })(req, res, next);
+  } else {
+    next();
+  }
+});
+
+// Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
