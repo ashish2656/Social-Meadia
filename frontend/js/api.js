@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:8000/api';
+// API Configuration
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000/api'
+    : 'https://social-media-backend.onrender.com/api';
 
 class ApiService {
     constructor() {

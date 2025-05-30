@@ -31,8 +31,8 @@ A full-stack social media application similar to Instagram, built with vanilla J
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/YourUsername/Social-Media.git
-cd Social-Media
+git clone https://github.com/YourUsername/Social-Meadia.git
+cd Social-Meadia
 ```
 
 2. Install dependencies:
