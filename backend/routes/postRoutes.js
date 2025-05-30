@@ -49,23 +49,59 @@ router.post('/', protect, upload.single('image'), async (req, res) => {
 // Get feed posts
 router.get('/feed', protect, async (req, res) => {
   try {
+    // Ensure user object exists
+    if (!req.user) {
+      return res.status(401).json({ 
+        message: 'User not authenticated',
+        details: 'User object not found in request'
+      });
+    }
+
     let query = {};
     
     // If user has followers, only show posts from followed users and own posts
     if (req.user.following && req.user.following.length > 0) {
       query = {
-        user: { $in: [...req.user.following, req.user.id] }
+        user: { $in: [...req.user.following, req.user._id] }
       };
     }
 
     const posts = await Post.find(query)
       .populate('user', 'username profilePicture')
       .populate('comments.user', 'username profilePicture')
-      .sort('-createdAt');
+      .sort('-createdAt')
+      .lean(); // Use lean() for better performance
 
-    res.json(posts);
+    if (!posts) {
+      return res.status(404).json({ 
+        message: 'No posts found',
+        details: 'The feed is empty'
+      });
+    }
+
+    // Transform posts to ensure all required fields exist
+    const transformedPosts = posts.map(post => ({
+      ...post,
+      user: post.user || { username: 'Unknown', profilePicture: null },
+      likes: post.likes || [],
+      comments: (post.comments || []).map(comment => ({
+        ...comment,
+        user: comment.user || { username: 'Unknown', profilePicture: null }
+      }))
+    }));
+
+    res.json(transformedPosts);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Feed error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id
+    });
+    
+    res.status(500).json({ 
+      message: 'Error fetching feed',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
