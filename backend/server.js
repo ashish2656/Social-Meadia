@@ -13,8 +13,16 @@ const app = express();
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  // Check if directory is writable
+  fs.accessSync(uploadsDir, fs.constants.W_OK);
+  console.log('Uploads directory is ready:', uploadsDir);
+} catch (error) {
+  console.error('Error setting up uploads directory:', error);
+  process.exit(1);
 }
 
 // Middleware
@@ -41,8 +49,27 @@ app.use((req, res, next) => {
   }
 });
 
-// Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve static files with error handling
+app.use('/uploads', (req, res, next) => {
+  const filePath = path.join(uploadsDir, req.path);
+  // Prevent directory traversal
+  if (!filePath.startsWith(uploadsDir)) {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+  express.static(uploadsDir)(req, res, (err) => {
+    if (err) {
+      console.error('Static file error:', {
+        path: req.path,
+        error: err.message
+      });
+      if (err.code === 'ENOENT') {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      return res.status(500).json({ message: 'Error serving file' });
+    }
+    next();
+  });
+});
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Ashish:@Ashish5151@socialmeadia.73eeui8.mongodb.net/?retryWrites=true&w=majority';

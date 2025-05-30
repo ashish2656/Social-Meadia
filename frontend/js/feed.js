@@ -19,6 +19,10 @@ class Feed {
     }
 
     createPostHTML(post) {
+        const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8000'
+            : 'https://social-media-backend-fnjj.onrender.com';
+
         return `
             <div class="post" data-post-id="${post._id}">
                 <div class="post-header">
@@ -26,7 +30,7 @@ class Feed {
                     <a href="#" class="profile-link" data-username="${post.user.username}">${post.user.username}</a>
                 </div>
                 <div class="post-image">
-                    <img src="http://localhost:8000/uploads/${post.image}" alt="Post">
+                    <img src="${baseUrl}/uploads/${post.image}" alt="Post">
                 </div>
                 <div class="post-actions">
                     <button class="like-button ${post.likes.includes(auth.currentUser._id) ? 'liked' : ''}">

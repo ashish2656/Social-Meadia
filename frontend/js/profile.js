@@ -45,9 +45,13 @@ class Profile {
     }
 
     renderProfilePosts(posts) {
+        const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8000'
+            : 'https://social-media-backend-fnjj.onrender.com';
+
         this.profilePosts.innerHTML = posts.map(post => `
             <div class="profile-post" data-post-id="${post._id}">
-                <img src="http://localhost:5000/uploads/${post.image}" alt="Post">
+                <img src="${baseUrl}/uploads/${post.image}" alt="Post">
                 <div class="profile-post-overlay">
                     <div class="profile-post-stats">
                         <span><i class="fas fa-heart"></i> ${post.likes.length}</span>
