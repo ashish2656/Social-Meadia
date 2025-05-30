@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstaClone</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-wrapper">
+            <div class="logo">
+                <h1>InstaClone</h1>
+            </div>
+            <div class="nav-items" id="nav-items">
+                <a href="#" class="nav-link" id="home-link"><i class="fas fa-home"></i> Home</a>
+                <a href="#" class="nav-link" id="upload-link"><i class="fas fa-plus-square"></i> Upload</a>
+                <a href="#" class="nav-link" id="profile-link"><i class="fas fa-user"></i> Profile</a>
+                <a href="#" class="nav-link" id="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Auth Forms -->
+        <div id="auth-container" class="container">
+            <div class="auth-form">
+                <h2>Login</h2>
+                <form id="login-form">
+                    <input type="email" placeholder="Email" required>
+                    <input type="password" placeholder="Password" required>
+                    <button type="submit">Login</button>
+                </form>
+                <p>Don't have an account? <a href="#" id="show-register">Register</a></p>
+            </div>
+
+            <div class="auth-form hidden">
+                <h2>Register</h2>
+                <form id="register-form">
+                    <input type="text" placeholder="Username" required>
+                    <input type="email" placeholder="Email" required>
+                    <input type="password" placeholder="Password" required>
+                    <button type="submit">Register</button>
+                </form>
+                <p>Already have an account? <a href="#" id="show-login">Login</a></p>
+            </div>
+        </div>
+
+        <!-- Feed -->
+        <div id="feed-container" class="container hidden">
+            <div class="posts">
+                <!-- Posts will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Profile -->
+        <div id="profile-container" class="container hidden">
+            <div class="profile-header">
+                <div class="profile-image">
+                    <img src="images/default-profile.png" alt="Profile" id="profile-pic">
+                </div>
+                <div class="profile-info">
+                    <h2 id="profile-username"></h2>
+                    <div class="profile-stats">
+                        <span id="posts-count">0 posts</span>
+                        <span id="followers-count">0 followers</span>
+                        <span id="following-count">0 following</span>
+                    </div>
+                    <p id="profile-bio"></p>
+                </div>
+            </div>
+            <div class="profile-posts">
+                <!-- User posts will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Upload Post -->
+        <div id="upload-container" class="container hidden">
+            <div class="upload-form">
+                <h2>Create New Post</h2>
+                <form id="post-form">
+                    <div class="image-preview">
+                        <img id="preview-image" src="#" alt="Preview" style="display: none;">
+                    </div>
+                    <input type="file" id="image-input" accept="image/*" required>
+                    <textarea placeholder="Write a caption..." required></textarea>
+                    <button type="submit">Share</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/feed.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/upload.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 
