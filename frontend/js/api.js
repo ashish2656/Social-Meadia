@@ -144,6 +144,81 @@ class ApiService {
             method: 'POST'
         });
     }
+
+    // Chat endpoints
+    async getChats() {
+        return this.request('/chats');
+    }
+
+    async createIndividualChat(recipientId) {
+        return this.request('/chats/individual', {
+            method: 'POST',
+            body: JSON.stringify({ recipientId })
+        });
+    }
+
+    async createGroupChat(name, participantIds) {
+        return this.request('/chats/group', {
+            method: 'POST',
+            body: JSON.stringify({ name, participantIds })
+        });
+    }
+
+    async getChatMessages(chatId, page = 1) {
+        return this.request(`/chats/${chatId}/messages?page=${page}`);
+    }
+
+    async sendMessage(chatId, content, file = null) {
+        if (file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('content', content);
+            
+            const url = `${API_URL}/chats/${chatId}/messages`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${this.token}`
+                },
+                body: formData,
+                credentials: 'include',
+                mode: 'cors'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Error sending message');
+            }
+
+            return await response.json();
+        }
+
+        return this.request(`/chats/${chatId}/messages`, {
+            method: 'POST',
+            body: JSON.stringify({ content })
+        });
+    }
+
+    async markMessagesAsRead(chatId, messageIds) {
+        return this.request(`/chats/${chatId}/read`, {
+            method: 'POST',
+            body: JSON.stringify({ messageIds })
+        });
+    }
+
+    async initiateCall(chatId, type) {
+        return this.request(`/chats/${chatId}/call`, {
+            method: 'POST',
+            body: JSON.stringify({ type })
+        });
+    }
+
+    async updateCallStatus(chatId, callId, status) {
+        return this.request(`/chats/${chatId}/call/${callId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ status })
+        });
+    }
 }
 
 const api = new ApiService(); 

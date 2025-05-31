@@ -16,6 +16,7 @@
             </div>
             <div class="nav-items" id="nav-items">
                 <a href="#" class="nav-link" id="home-link"><i class="fas fa-home"></i> Home</a>
+                <a href="#" class="nav-link" id="chat-link"><i class="fas fa-comments"></i> Chat</a>
                 <a href="#" class="nav-link" id="upload-link"><i class="fas fa-plus-square"></i> Upload</a>
                 <a href="#" class="nav-link" id="profile-link"><i class="fas fa-user"></i> Profile</a>
                 <a href="#" class="nav-link" id="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -55,24 +56,98 @@
             </div>
         </div>
 
+        <!-- Chat -->
+        <div id="chat-container" class="container hidden">
+            <div class="chat-wrapper">
+                <div class="chat-sidebar">
+                    <div class="chat-header">
+                        <button class="btn btn-primary" id="new-chat-btn">
+                            <i class="fas fa-edit"></i> New Message
+                        </button>
+                    </div>
+                    <div class="chat-list" id="chat-list">
+                        <!-- Chat list items will be added here -->
+                    </div>
+                </div>
+                <div class="chat-main">
+                    <div id="empty-chat-state" class="flex-center">
+                        <div class="text-center">
+                            <i class="fas fa-comments text-6xl mb-4"></i>
+                            <h2>Your Messages</h2>
+                            <p>Send private photos and messages to a friend or group</p>
+                        </div>
+                    </div>
+                    <div id="active-chat" class="hidden">
+                        <div class="chat-header" id="chat-header">
+                            <!-- Active chat header will be added here -->
+                        </div>
+                        <div class="messages-container" id="messages-container">
+                            <!-- Messages will be added here -->
+                        </div>
+                        <div class="chat-input-container">
+                            <form id="message-form" class="message-form">
+                                <button type="button" class="btn" id="attachment-btn">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <input type="text" placeholder="Type a message..." id="message-input">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Profile -->
         <div id="profile-container" class="container hidden">
             <div class="profile-header">
-                <div class="profile-image">
-                    <img src="images/default-profile.png" alt="Profile" id="profile-pic">
+                <div class="profile-cover">
+                    <img src="images/default-cover.jpg" alt="Cover" id="cover-pic">
                 </div>
                 <div class="profile-info">
-                    <h2 id="profile-username"></h2>
-                    <div class="profile-stats">
-                        <span id="posts-count">0 posts</span>
-                        <span id="followers-count">0 followers</span>
-                        <span id="following-count">0 following</span>
+                    <div class="profile-image">
+                        <img src="images/default-profile.png" alt="Profile" id="profile-pic">
                     </div>
-                    <p id="profile-bio"></p>
+                    <div class="profile-details">
+                        <h2 id="profile-username"></h2>
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="posts-count">0</span>
+                                <span class="stat-label">posts</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="followers-count">0</span>
+                                <span class="stat-label">followers</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="following-count">0</span>
+                                <span class="stat-label">following</span>
+                            </div>
+                        </div>
+                        <p id="profile-bio"></p>
+                        <div class="profile-actions">
+                            <button class="btn btn-primary" id="edit-profile-btn">Edit Profile</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="profile-posts">
-                <!-- User posts will be dynamically added here -->
+            <div class="profile-content">
+                <div class="profile-tabs">
+                    <button class="tab active" data-tab="posts">
+                        <i class="fas fa-th"></i> Posts
+                    </button>
+                    <button class="tab" data-tab="saved">
+                        <i class="fas fa-bookmark"></i> Saved
+                    </button>
+                    <button class="tab" data-tab="tagged">
+                        <i class="fas fa-user-tag"></i> Tagged
+                    </button>
+                </div>
+                <div class="posts-grid" id="profile-posts">
+                    <!-- User posts will be dynamically added here -->
+                </div>
             </div>
         </div>
 
@@ -86,17 +161,39 @@
                     </div>
                     <input type="file" id="image-input" accept="image/*" required>
                     <textarea placeholder="Write a caption..." required></textarea>
-                    <button type="submit">Share</button>
+                    <button type="submit" class="btn btn-primary">Share</button>
                 </form>
             </div>
         </div>
     </main>
+
+    <!-- Call Interface (Hidden by default) -->
+    <div id="call-interface" class="hidden">
+        <div class="call-container">
+            <div class="call-streams">
+                <video id="remote-video" autoplay playsinline></video>
+                <video id="local-video" autoplay playsinline muted></video>
+            </div>
+            <div class="call-controls">
+                <button class="btn btn-circle" id="toggle-audio">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="btn btn-circle" id="toggle-video">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button class="btn btn-circle btn-danger" id="end-call">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/feed.js"></script>
     <script src="js/profile.js"></script>
     <script src="js/upload.js"></script>
+    <script src="js/components/Chat.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html> 
