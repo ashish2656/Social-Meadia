@@ -55,19 +55,25 @@ class Auth {
     async handleLogin(e) {
         e.preventDefault();
         const form = e.target;
+        const errorDiv = form.querySelector('.error-message');
         const email = form.querySelector('input[type="email"]').value;
         const password = form.querySelector('input[type="password"]').value;
 
         try {
-            const response = await api.post('/api/auth/login', { email, password });
-            this.setSession(response.data.token);
-            this.currentUser = response.data.user;
+            const { data } = await api.post('/api/auth/login', { email, password });
+            this.setSession(data.token);
+            this.currentUser = {
+                _id: data._id,
+                username: data.username,
+                email: data.email
+            };
             this.isAuthenticated = true;
             this.onAuthStateChange();
             window.location.reload();
         } catch (error) {
             console.error('Login error:', error);
-            alert('Invalid email or password');
+            errorDiv.textContent = error.response?.data?.message || 'Invalid email or password';
+            errorDiv.style.display = 'block';
         }
     }
 
@@ -77,12 +83,14 @@ class Auth {
         const username = form.querySelector('input[type="text"]').value;
         const email = form.querySelector('input[type="email"]').value;
         const password = form.querySelector('input[type="password"]').value;
+        const fullName = username; // Use username as fullName if not provided
 
         try {
             const response = await api.post('/api/auth/register', {
                 username,
                 email,
-                password
+                password,
+                fullName
             });
             this.setSession(response.data.token);
             this.currentUser = response.data.user;
