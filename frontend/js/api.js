@@ -85,11 +85,11 @@ class Api {
 
     // Auth endpoints
     async register(userData) {
-        return this.post('/api/users/register', userData);
+        return this.post('/api/auth/register', userData);
     }
 
     async login(credentials) {
-        return this.post('/api/users/login', credentials);
+        return this.post('/api/auth/login', credentials);
     }
 
     // Post endpoints
