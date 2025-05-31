@@ -100,12 +100,13 @@ class Auth {
             const formData = new FormData(form);
             const userData = {
                 username: formData.get('username'),
-                fullName: formData.get('fullName'),
                 email: formData.get('email'),
                 password: formData.get('password')
             };
 
-            console.log('Registration attempt with:', userData);
+            // Debug logging
+            console.log('Form data entries:', Object.fromEntries(formData.entries()));
+            console.log('Registration data being sent:', JSON.stringify(userData, null, 2));
 
             const data = await api.register(userData);
             console.log('Registration response:', data);
@@ -113,8 +114,7 @@ class Auth {
             this.currentUser = {
                 _id: data._id,
                 username: data.username,
-                email: data.email,
-                fullName: data.fullName
+                email: data.email
             };
             this.isAuthenticated = true;
             this.onAuthStateChange();

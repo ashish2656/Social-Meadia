@@ -34,12 +34,12 @@ class Api {
         const headers = this.getHeaders();
 
         try {
-            console.log('Making request to:', url, {
-                ...options,
-                headers: {
-                    ...headers,
-                    ...options.headers
-                }
+            // Debug request
+            console.log('Making API request:', {
+                url,
+                method: options.method || 'GET',
+                headers,
+                body: options.body ? JSON.parse(options.body) : undefined
             });
 
             const response = await fetch(url, {
@@ -51,7 +51,13 @@ class Api {
             });
 
             const data = await response.json();
-            console.log('Response:', data);
+            
+            // Debug response
+            console.log('API Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                data
+            });
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -102,15 +108,29 @@ class Api {
 
     // Auth endpoints
     async register(userData) {
-        const { data } = await this.post('/api/auth/register', userData);
-        this.setToken(data.token);
-        return data;
+        try {
+            const { data } = await this.post('/api/auth/register', {
+                username: userData.username,
+                email: userData.email,
+                password: userData.password
+            });
+            this.setToken(data.token);
+            return data;
+        } catch (error) {
+            console.error('Registration API error:', error);
+            throw error;
+        }
     }
 
     async login(credentials) {
-        const { data } = await this.post('/api/auth/login', credentials);
-        this.setToken(data.token);
-        return data;
+        try {
+            const { data } = await this.post('/api/auth/login', credentials);
+            this.setToken(data.token);
+            return data;
+        } catch (error) {
+            console.error('Login API error:', error);
+            throw error;
+        }
     }
 
     // Post endpoints
