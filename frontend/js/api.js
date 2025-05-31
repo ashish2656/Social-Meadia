@@ -112,7 +112,8 @@ class Api {
             const { data } = await this.post('/api/auth/register', {
                 username: userData.username,
                 email: userData.email,
-                password: userData.password
+                password: userData.password,
+                fullName: userData.username
             });
             this.setToken(data.token);
             return data;
