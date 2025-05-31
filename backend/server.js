@@ -164,12 +164,11 @@ app.use('/uploads', express.static(uploadsDir, {
 }));
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Ashish:@Ashish5151@socialmeadia.73eeui8.mongodb.net/?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Ashish:Ashish5151@socialmeadia.73eeui8.mongodb.net/instaclone?retryWrites=true&w=majority';
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-  dbName: 'instaclone'
+  useUnifiedTopology: true
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch((err) => {
