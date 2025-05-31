@@ -1,6 +1,6 @@
 // API Configuration
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000'
+    ? 'http://localhost:8000'
     : 'https://social-media-backend-fnjj.onrender.com';
 
 const UPLOADS_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -13,33 +13,46 @@ class Api {
         this.token = localStorage.getItem('token');
     }
 
-    getHeaders() {
-        return {
-            'Content-Type': 'application/json',
-            'Authorization': this.token ? `Bearer ${this.token}` : ''
-        };
+    getHeaders(isFormData = false) {
+        const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        return headers;
     }
 
     setToken(token) {
-        this.token = token;
-        if (token) {
-            localStorage.setItem('token', token);
-        } else {
+        if (!token) {
+            this.token = null;
             localStorage.removeItem('token');
+            return;
         }
+        
+        // Validate token format (basic check)
+        if (typeof token !== 'string' || !token.trim()) {
+            throw new Error('Invalid token format');
+        }
+
+        this.token = token;
+        localStorage.setItem('token', token);
+    }
+
+    clearToken() {
+        this.token = null;
+        localStorage.removeItem('token');
     }
 
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
-        const headers = this.getHeaders();
+        const isFormData = options.body instanceof FormData;
+        const headers = this.getHeaders(isFormData);
 
         try {
             // Debug request
             console.log('Making API request:', {
                 url,
                 method: options.method || 'GET',
-                headers,
-                body: options.body ? JSON.parse(options.body) : undefined
+                headers
             });
 
             const response = await fetch(url, {
@@ -61,7 +74,7 @@ class Api {
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    this.setToken(null);
+                    this.clearToken();
                     window.location.href = 'index.html';
                     return;
                 }
@@ -94,8 +107,7 @@ class Api {
     async put(endpoint, body) {
         return this.request(endpoint, {
             method: 'PUT',
-            body: body instanceof FormData ? body : JSON.stringify(body),
-            headers: body instanceof FormData ? {} : undefined
+            body: body instanceof FormData ? body : JSON.stringify(body)
         });
     }
 
@@ -115,8 +127,13 @@ class Api {
                 password: userData.password,
                 fullName: userData.username
             });
+
+            if (!data.token || !data.user) {
+                throw new Error('Invalid response format from register');
+            }
+
             this.setToken(data.token);
-            return data;
+            return data.user;
         } catch (error) {
             console.error('Registration API error:', error);
             throw error;
@@ -126,10 +143,26 @@ class Api {
     async login(credentials) {
         try {
             const { data } = await this.post('/api/auth/login', credentials);
+            
+            if (!data.token || !data.user) {
+                throw new Error('Invalid response format from login');
+            }
+
             this.setToken(data.token);
-            return data;
+            return data.user;
         } catch (error) {
             console.error('Login API error:', error);
+            throw error;
+        }
+    }
+
+    async getCurrentUser() {
+        try {
+            const { data } = await this.get('/api/users/me');
+            return data;
+        } catch (error) {
+            console.error('Get current user error:', error);
+            this.clearToken();
             throw error;
         }
     }

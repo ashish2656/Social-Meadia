@@ -6,6 +6,8 @@ class Auth {
 
         // Get DOM elements
         this.authContainer = document.getElementById('auth-container');
+        this.feedContainer = document.getElementById('feed-container');
+        this.navItems = document.getElementById('nav-items');
         this.loginForm = document.getElementById('login-form');
         this.registerForm = document.getElementById('register-form');
         this.showLoginBtn = document.getElementById('show-login');
@@ -42,13 +44,30 @@ class Auth {
 
     async loadUser() {
         try {
-            const { data } = await api.get('/api/users/me');
-            this.currentUser = data;
-            this.isAuthenticated = true;
-            this.onAuthStateChange();
+            const user = await api.getCurrentUser();
+            this.setAuthState(true, user);
         } catch (error) {
             console.error('Error loading user:', error);
             this.logout();
+        }
+    }
+
+    setAuthState(isAuthenticated, user = null) {
+        this.isAuthenticated = isAuthenticated;
+        this.currentUser = user;
+        this.updateUI();
+        this.onAuthStateChange();
+    }
+
+    updateUI() {
+        if (this.isAuthenticated) {
+            this.feedContainer?.classList.remove('hidden');
+            this.authContainer?.classList.add('hidden');
+            this.navItems?.classList.remove('hidden');
+        } else {
+            this.feedContainer?.classList.add('hidden');
+            this.authContainer?.classList.remove('hidden');
+            this.navItems?.classList.add('hidden');
         }
     }
 
@@ -65,18 +84,8 @@ class Auth {
                 password: formData.get('password')
             };
 
-            console.log('Login attempt with:', credentials);
-
-            const data = await api.login(credentials);
-            console.log('Login response:', data);
-
-            this.currentUser = {
-                _id: data._id,
-                username: data.username,
-                email: data.email
-            };
-            this.isAuthenticated = true;
-            this.onAuthStateChange();
+            const user = await api.login(credentials);
+            this.setAuthState(true, user);
 
             // Clear form
             form.reset();
@@ -104,20 +113,8 @@ class Auth {
                 password: formData.get('password')
             };
 
-            // Debug logging
-            console.log('Form data entries:', Object.fromEntries(formData.entries()));
-            console.log('Registration data being sent:', JSON.stringify(userData, null, 2));
-
-            const data = await api.register(userData);
-            console.log('Registration response:', data);
-
-            this.currentUser = {
-                _id: data._id,
-                username: data.username,
-                email: data.email
-            };
-            this.isAuthenticated = true;
-            this.onAuthStateChange();
+            const user = await api.register(userData);
+            this.setAuthState(true, user);
 
             // Clear form
             form.reset();
@@ -131,18 +128,15 @@ class Auth {
         }
     }
 
-    handleLogout(e) {
+    async handleLogout(e) {
         e.preventDefault();
-        this.logout();
+        await this.logout();
         window.location.href = 'index.html';
     }
 
-    logout() {
-        localStorage.removeItem('token');
-        this.token = null;
-        this.currentUser = null;
-        this.isAuthenticated = false;
-        this.onAuthStateChange();
+    async logout() {
+        api.clearToken();
+        this.setAuthState(false, null);
     }
 
     toggleAuthForms(show) {
@@ -171,17 +165,6 @@ class Auth {
             }
         });
         window.dispatchEvent(event);
-
-        // Update UI based on auth state
-        if (this.isAuthenticated) {
-            document.getElementById('feed-container')?.classList.remove('hidden');
-            document.getElementById('auth-container')?.classList.add('hidden');
-            document.getElementById('nav-items')?.classList.remove('hidden');
-        } else {
-            document.getElementById('feed-container')?.classList.add('hidden');
-            document.getElementById('auth-container')?.classList.remove('hidden');
-            document.getElementById('nav-items')?.classList.add('hidden');
-        }
     }
 }
 
