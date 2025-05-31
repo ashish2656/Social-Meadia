@@ -33,6 +33,8 @@ class Api {
                 }
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
                 if (response.status === 401) {
                     // Token expired or invalid
@@ -40,10 +42,9 @@ class Api {
                     window.location.href = 'index.html';
                     return;
                 }
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
             return { data };
         } catch (error) {
             console.error('API request failed:', error);

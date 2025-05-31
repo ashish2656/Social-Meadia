@@ -80,26 +80,34 @@ class Auth {
     async handleRegister(e) {
         e.preventDefault();
         const form = e.target;
-        const username = form.querySelector('input[type="text"]').value;
-        const email = form.querySelector('input[type="email"]').value;
-        const password = form.querySelector('input[type="password"]').value;
-        const fullName = username; // Use username as fullName if not provided
+        const errorDiv = form.querySelector('.error-message');
+        const username = form.querySelector('input[name="username"]').value;
+        const fullName = form.querySelector('input[name="fullName"]').value;
+        const email = form.querySelector('input[name="email"]').value;
+        const password = form.querySelector('input[name="password"]').value;
 
         try {
-            const response = await api.post('/api/auth/register', {
+            const { data } = await api.post('/api/auth/register', {
                 username,
                 email,
                 password,
                 fullName
             });
-            this.setSession(response.data.token);
-            this.currentUser = response.data.user;
+            
+            this.setSession(data.token);
+            this.currentUser = {
+                _id: data._id,
+                username: data.username,
+                email: data.email,
+                fullName: data.fullName
+            };
             this.isAuthenticated = true;
             this.onAuthStateChange();
             window.location.reload();
         } catch (error) {
             console.error('Registration error:', error);
-            alert('Error creating account. Please try again.');
+            errorDiv.textContent = error.message || 'Error creating account. Please try again.';
+            errorDiv.style.display = 'block';
         }
     }
 

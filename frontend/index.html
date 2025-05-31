@@ -41,9 +41,11 @@
             <div class="auth-form hidden">
                 <h2>Register</h2>
                 <form id="register-form">
-                    <input type="text" placeholder="Username" required>
-                    <input type="email" placeholder="Email" required>
-                    <input type="password" placeholder="Password" required>
+                    <div class="error-message" style="color: red; margin-bottom: 10px; display: none;"></div>
+                    <input type="text" name="username" placeholder="Username" required>
+                    <input type="text" name="fullName" placeholder="Full Name" required>
+                    <input type="email" name="email" placeholder="Email" required>
+                    <input type="password" name="password" placeholder="Password" required>
                     <button type="submit" class="btn btn-primary">Register</button>
                 </form>
                 <p>Already have an account? <a href="#" id="show-login">Login</a></p>
@@ -105,7 +107,7 @@
         <div id="profile-container" class="container hidden">
             <div class="profile-header">
                 <div class="profile-cover">
-                    <img src="https://via.placeholder.com/1200x400" alt="Cover" id="cover-pic">
+                    <img src="https://placehold.co/1200x400" alt="Cover" id="cover-pic">
                 </div>
                 <div class="profile-info">
                     <div class="profile-image">
