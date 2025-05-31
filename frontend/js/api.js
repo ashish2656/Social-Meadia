@@ -3,6 +3,10 @@ const API_URL = window.location.hostname === 'localhost' || window.location.host
     ? 'http://localhost:8000/api'
     : 'https://social-media-backend-fnjj.onrender.com/api';
 
+const UPLOADS_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://social-media-backend-fnjj.onrender.com';
+
 class ApiService {
     constructor() {
         this.token = localStorage.getItem('token');
@@ -29,7 +33,8 @@ class ApiService {
         try {
             const response = await fetch(url, {
                 ...options,
-                headers
+                headers,
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -39,6 +44,7 @@ class ApiService {
 
             return await response.json();
         } catch (error) {
+            console.error('API Error:', error);
             throw error;
         }
     }

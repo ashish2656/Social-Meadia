@@ -24,7 +24,7 @@ class Profile {
 
     renderProfile(userData, posts) {
         this.profileUsername.textContent = userData.username;
-        this.profilePic.src = userData.profilePicture;
+        this.profilePic.src = userData.profilePicture || 'images/default-profile.png';
         this.postsCount.textContent = `${posts.length} posts`;
         this.followersCount.textContent = `${userData.followers.length} followers`;
         this.followingCount.textContent = `${userData.following.length} following`;
@@ -45,13 +45,9 @@ class Profile {
     }
 
     renderProfilePosts(posts) {
-        const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://localhost:8000'
-            : 'https://social-media-backend-fnjj.onrender.com';
-
         this.profilePosts.innerHTML = posts.map(post => `
             <div class="profile-post" data-post-id="${post._id}">
-                <img src="${baseUrl}/uploads/${post.image}" alt="Post">
+                <img src="${UPLOADS_BASE_URL}/uploads/${post.image}" alt="Post">
                 <div class="profile-post-overlay">
                     <div class="profile-post-stats">
                         <span><i class="fas fa-heart"></i> ${post.likes.length}</span>

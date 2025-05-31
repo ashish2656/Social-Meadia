@@ -19,10 +19,6 @@ class Feed {
     }
 
     createPostHTML(post) {
-        const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://localhost:8000'
-            : 'https://social-media-backend-fnjj.onrender.com';
-
         return `
             <div class="post" data-post-id="${post._id}">
                 <div class="post-header">
@@ -30,7 +26,7 @@ class Feed {
                     <a href="#" class="profile-link" data-username="${post.user.username}">${post.user.username}</a>
                 </div>
                 <div class="post-image">
-                    <img src="${baseUrl}/uploads/${post.image}" alt="Post">
+                    <img src="${UPLOADS_BASE_URL}/uploads/${post.image}" alt="Post">
                 </div>
                 <div class="post-actions">
                     <button class="like-button ${post.likes.includes(auth.currentUser._id) ? 'liked' : ''}">
@@ -38,6 +34,9 @@ class Feed {
                     </button>
                     <button class="comment-button">
                         <i class="far fa-comment"></i>
+                    </button>
+                    <button class="share-button">
+                        <i class="far fa-share-square"></i>
                     </button>
                 </div>
                 <div class="post-likes">
@@ -131,6 +130,48 @@ class Feed {
                 profile.loadProfile(username);
             });
         });
+
+        // Share buttons
+        this.postsContainer.querySelectorAll('.share-button').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const post = e.target.closest('.post');
+                const postId = post.dataset.postId;
+                const imageUrl = post.querySelector('.post-image img').src;
+                const caption = post.querySelector('.post-caption').textContent;
+                
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: 'Check out this post!',
+                            text: caption,
+                            url: imageUrl
+                        });
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            console.error('Error sharing:', error);
+                            this.fallbackShare(imageUrl);
+                        }
+                    }
+                } else {
+                    this.fallbackShare(imageUrl);
+                }
+            });
+        });
+    }
+
+    fallbackShare(url) {
+        // Create a temporary input element
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        
+        // Copy the URL
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        
+        // Show feedback
+        alert('Link copied to clipboard!');
     }
 }
 

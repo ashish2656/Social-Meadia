@@ -181,6 +181,12 @@ body {
     cursor: pointer;
     font-size: 24px;
     margin-right: 16px;
+    color: #262626;
+    transition: color 0.2s ease;
+}
+
+.post-actions button:hover {
+    color: #8e8e8e;
 }
 
 .post-likes {
@@ -281,4 +287,13 @@ textarea {
 /* Utilities */
 .hidden {
     display: none !important;
+}
+
+.share-button {
+    float: right;
+    margin-right: 0 !important;
+}
+
+.share-button:hover {
+    color: #0095f6 !important;
 } 
