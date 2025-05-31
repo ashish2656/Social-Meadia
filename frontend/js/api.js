@@ -10,14 +10,23 @@ const UPLOADS_BASE_URL = window.location.hostname === 'localhost' || window.loca
 class Api {
     constructor() {
         this.baseUrl = API_URL;
+        this.token = localStorage.getItem('token');
     }
 
     getHeaders() {
-        const token = localStorage.getItem('token');
         return {
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
+            'Authorization': this.token ? `Bearer ${this.token}` : ''
         };
+    }
+
+    setToken(token) {
+        this.token = token;
+        if (token) {
+            localStorage.setItem('token', token);
+        } else {
+            localStorage.removeItem('token');
+        }
     }
 
     async request(endpoint, options = {}) {
@@ -25,6 +34,14 @@ class Api {
         const headers = this.getHeaders();
 
         try {
+            console.log('Making request to:', url, {
+                ...options,
+                headers: {
+                    ...headers,
+                    ...options.headers
+                }
+            });
+
             const response = await fetch(url, {
                 ...options,
                 headers: {
@@ -34,11 +51,11 @@ class Api {
             });
 
             const data = await response.json();
+            console.log('Response:', data);
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    // Token expired or invalid
-                    localStorage.removeItem('token');
+                    this.setToken(null);
                     window.location.href = 'index.html';
                     return;
                 }
@@ -63,8 +80,7 @@ class Api {
     async post(endpoint, body) {
         return this.request(endpoint, {
             method: 'POST',
-            body: body instanceof FormData ? body : JSON.stringify(body),
-            headers: body instanceof FormData ? {} : undefined
+            body: body instanceof FormData ? body : JSON.stringify(body)
         });
     }
 
@@ -86,11 +102,15 @@ class Api {
 
     // Auth endpoints
     async register(userData) {
-        return this.post('/api/auth/register', userData);
+        const { data } = await this.post('/api/auth/register', userData);
+        this.setToken(data.token);
+        return data;
     }
 
     async login(credentials) {
-        return this.post('/api/auth/login', credentials);
+        const { data } = await this.post('/api/auth/login', credentials);
+        this.setToken(data.token);
+        return data;
     }
 
     // Post endpoints

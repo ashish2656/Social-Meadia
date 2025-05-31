@@ -1,7 +1,7 @@
 class Auth {
     constructor() {
-        this.currentUser = null;
         this.token = localStorage.getItem('token');
+        this.currentUser = null;
         this.isAuthenticated = !!this.token;
 
         // Get DOM elements
@@ -42,8 +42,8 @@ class Auth {
 
     async loadUser() {
         try {
-            const response = await api.get('/api/users/me');
-            this.currentUser = response.data;
+            const { data } = await api.get('/api/users/me');
+            this.currentUser = data;
             this.isAuthenticated = true;
             this.onAuthStateChange();
         } catch (error) {
@@ -56,12 +56,20 @@ class Auth {
         e.preventDefault();
         const form = e.target;
         const errorDiv = form.querySelector('.error-message');
-        const email = form.querySelector('input[type="email"]').value;
-        const password = form.querySelector('input[type="password"]').value;
+        errorDiv.style.display = 'none';
 
         try {
-            const { data } = await api.post('/api/auth/login', { email, password });
-            this.setSession(data.token);
+            const formData = new FormData(form);
+            const credentials = {
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+
+            console.log('Login attempt with:', credentials);
+
+            const data = await api.login(credentials);
+            console.log('Login response:', data);
+
             this.currentUser = {
                 _id: data._id,
                 username: data.username,
@@ -69,10 +77,15 @@ class Auth {
             };
             this.isAuthenticated = true;
             this.onAuthStateChange();
-            window.location.reload();
+
+            // Clear form
+            form.reset();
+
+            // Redirect to home page
+            window.location.href = 'index.html';
         } catch (error) {
             console.error('Login error:', error);
-            errorDiv.textContent = error.response?.data?.message || 'Invalid email or password';
+            errorDiv.textContent = error.message || 'Invalid email or password';
             errorDiv.style.display = 'block';
         }
     }
@@ -81,20 +94,22 @@ class Auth {
         e.preventDefault();
         const form = e.target;
         const errorDiv = form.querySelector('.error-message');
-        const username = form.querySelector('input[name="username"]').value;
-        const fullName = form.querySelector('input[name="fullName"]').value;
-        const email = form.querySelector('input[name="email"]').value;
-        const password = form.querySelector('input[name="password"]').value;
+        errorDiv.style.display = 'none';
 
         try {
-            const { data } = await api.post('/api/auth/register', {
-                username,
-                email,
-                password,
-                fullName
-            });
-            
-            this.setSession(data.token);
+            const formData = new FormData(form);
+            const userData = {
+                username: formData.get('username'),
+                fullName: formData.get('fullName'),
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+
+            console.log('Registration attempt with:', userData);
+
+            const data = await api.register(userData);
+            console.log('Registration response:', data);
+
             this.currentUser = {
                 _id: data._id,
                 username: data.username,
@@ -103,7 +118,12 @@ class Auth {
             };
             this.isAuthenticated = true;
             this.onAuthStateChange();
-            window.location.reload();
+
+            // Clear form
+            form.reset();
+
+            // Redirect to home page
+            window.location.href = 'index.html';
         } catch (error) {
             console.error('Registration error:', error);
             errorDiv.textContent = error.message || 'Error creating account. Please try again.';
@@ -115,11 +135,6 @@ class Auth {
         e.preventDefault();
         this.logout();
         window.location.href = 'index.html';
-    }
-
-    setSession(token) {
-        localStorage.setItem('token', token);
-        this.token = token;
     }
 
     logout() {
@@ -156,7 +171,19 @@ class Auth {
             }
         });
         window.dispatchEvent(event);
+
+        // Update UI based on auth state
+        if (this.isAuthenticated) {
+            document.getElementById('feed-container')?.classList.remove('hidden');
+            document.getElementById('auth-container')?.classList.add('hidden');
+            document.getElementById('nav-items')?.classList.remove('hidden');
+        } else {
+            document.getElementById('feed-container')?.classList.add('hidden');
+            document.getElementById('auth-container')?.classList.remove('hidden');
+            document.getElementById('nav-items')?.classList.add('hidden');
+        }
     }
 }
 
-const auth = new Auth(); 
+// Initialize auth
+window.auth = new Auth(); 
