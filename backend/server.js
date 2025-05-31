@@ -111,7 +111,7 @@ app.use(cors({
         'https://social-meadia-zg52-fyoplnw1j-ashishs-projects-9530e095.vercel.app',
         /\.vercel\.app$/  // Allow all Vercel preview domains
       ]
-    : ['http://localhost:8080', 'http://127.0.0.1:8080'],
+    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:8080', 'http://127.0.0.1:8080'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
