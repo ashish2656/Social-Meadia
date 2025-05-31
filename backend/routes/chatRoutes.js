@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Chat = require('../models/Chat');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 
@@ -33,7 +33,7 @@ const upload = multer({
 });
 
 // Get all chats for current user
-router.get('/', auth, async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const chats = await Chat.find({
       'participants.user': req.user.id
@@ -50,7 +50,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Create new individual chat
-router.post('/individual', auth, async (req, res) => {
+router.post('/individual', protect, async (req, res) => {
   try {
     const { recipientId } = req.body;
 
@@ -88,7 +88,7 @@ router.post('/individual', auth, async (req, res) => {
 });
 
 // Create new group chat
-router.post('/group', auth, async (req, res) => {
+router.post('/group', protect, async (req, res) => {
   try {
     const { name, participantIds } = req.body;
 
@@ -115,7 +115,7 @@ router.post('/group', auth, async (req, res) => {
 });
 
 // Send message
-router.post('/:chatId/messages', auth, upload.single('file'), async (req, res) => {
+router.post('/:chatId/messages', protect, upload.single('file'), async (req, res) => {
   try {
     const { chatId } = req.params;
     const { content, contentType = 'text' } = req.body;
@@ -152,7 +152,7 @@ router.post('/:chatId/messages', auth, upload.single('file'), async (req, res) =
 });
 
 // Get chat messages
-router.get('/:chatId/messages', auth, async (req, res) => {
+router.get('/:chatId/messages', protect, async (req, res) => {
   try {
     const { chatId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -179,7 +179,7 @@ router.get('/:chatId/messages', auth, async (req, res) => {
 });
 
 // Mark messages as read
-router.post('/:chatId/read', auth, async (req, res) => {
+router.post('/:chatId/read', protect, async (req, res) => {
   try {
     const { chatId } = req.params;
     const { messageIds } = req.body;
@@ -214,7 +214,7 @@ router.post('/:chatId/read', auth, async (req, res) => {
 });
 
 // Initiate call
-router.post('/:chatId/call', auth, async (req, res) => {
+router.post('/:chatId/call', protect, async (req, res) => {
   try {
     const { chatId } = req.params;
     const { type } = req.body;
@@ -250,7 +250,7 @@ router.post('/:chatId/call', auth, async (req, res) => {
 });
 
 // Update call status
-router.put('/:chatId/call/:callId', auth, async (req, res) => {
+router.put('/:chatId/call/:callId', protect, async (req, res) => {
   try {
     const { chatId, callId } = req.params;
     const { status } = req.body;
