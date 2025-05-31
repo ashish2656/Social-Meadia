@@ -21,11 +21,33 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  fullName: {
+    type: String,
+    required: true,
+    trim: true
+  },
   profilePicture: {
     type: String,
     default: 'default-profile.png'
   },
+  coverPhoto: {
+    type: String,
+    default: 'default-cover.png'
+  },
   bio: {
+    type: String,
+    default: '',
+    maxlength: 150
+  },
+  website: {
+    type: String,
+    default: ''
+  },
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
+  location: {
     type: String,
     default: ''
   },
@@ -36,7 +58,61 @@ const userSchema = new mongoose.Schema({
   following: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }]
+  }],
+  friends: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted'],
+      default: 'pending'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  savedPosts: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Post'
+  }],
+  taggedPosts: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Post'
+  }],
+  notifications: [{
+    type: {
+      type: String,
+      enum: ['follow', 'like', 'comment', 'mention', 'friend_request']
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    post: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Post'
+    },
+    read: {
+      type: Boolean,
+      default: false
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  lastSeen: {
+    type: Date,
+    default: Date.now
+  },
+  onlineStatus: {
+    type: String,
+    enum: ['online', 'offline', 'away'],
+    default: 'offline'
+  }
 }, {
   timestamps: true
 });
@@ -54,7 +130,7 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Method to compare passwords
+// Method to check password
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

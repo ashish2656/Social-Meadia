@@ -4,12 +4,103 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
+const WebSocket = require('ws');
+const http = require('http');
+const jwt = require('jsonwebtoken');
 
 // Load environment variables
 dotenv.config();
 
 // Create Express app
 const app = express();
+const server = http.createServer(app);
+
+// WebSocket server
+const wss = new WebSocket.Server({ server });
+
+// Store active connections
+const clients = new Map();
+
+// WebSocket connection handler
+wss.on('connection', async (ws, req) => {
+  try {
+    // Get token from query string
+    const token = req.url.split('?token=')[1];
+    if (!token) {
+      ws.close();
+      return;
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    // Store connection
+    clients.set(userId, ws);
+
+    // Update user's online status
+    await User.findByIdAndUpdate(userId, { 
+      onlineStatus: 'online',
+      lastSeen: new Date()
+    });
+
+    // Handle incoming messages
+    ws.on('message', async (data) => {
+      try {
+        const message = JSON.parse(data);
+        
+        switch (message.type) {
+          case 'ice_candidate':
+            // Forward ICE candidate to peer
+            const peerWs = clients.get(message.peerId);
+            if (peerWs) {
+              peerWs.send(JSON.stringify({
+                type: 'ice_candidate',
+                candidate: message.candidate,
+                chatId: message.chatId,
+                peerId: userId
+              }));
+            }
+            break;
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+
+    // Handle disconnection
+    ws.on('close', async () => {
+      clients.delete(userId);
+      await User.findByIdAndUpdate(userId, { 
+        onlineStatus: 'offline',
+        lastSeen: new Date()
+      });
+    });
+  } catch (error) {
+    console.error('WebSocket connection error:', error);
+    ws.close();
+  }
+});
+
+// Broadcast to chat participants
+function broadcastToChat(chatId, message, excludeUserId = null) {
+  Chat.findById(chatId)
+    .then(chat => {
+      if (!chat) return;
+
+      chat.participants.forEach(participant => {
+        if (participant.user.toString() === excludeUserId) return;
+        
+        const ws = clients.get(participant.user.toString());
+        if (ws) {
+          ws.send(JSON.stringify(message));
+        }
+      });
+    })
+    .catch(error => {
+      console.error('Broadcast error:', error);
+    });
+}
 
 // Middleware
 app.use(cors({
@@ -48,15 +139,19 @@ app.use((req, res, next) => {
 
 // Ensure uploads directory exists with proper permissions
 const uploadsDir = path.join(__dirname, 'uploads');
+const chatUploadsDir = path.join(uploadsDir, 'chat');
+
 try {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true, mode: 0o755 });
-  }
-  // Check if directory is writable
-  fs.accessSync(uploadsDir, fs.constants.W_OK);
-  console.log('Uploads directory is ready:', uploadsDir);
+  [uploadsDir, chatUploadsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
+    }
+    // Check if directory is writable
+    fs.accessSync(dir, fs.constants.W_OK);
+  });
+  console.log('Upload directories are ready');
 } catch (error) {
-  console.error('Error setting up uploads directory:', error);
+  console.error('Error setting up upload directories:', error);
   process.exit(1);
 }
 
@@ -74,7 +169,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Ashish:@Ashish5151
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  dbName: 'instaclone' // Explicitly specify the database name
+  dbName: 'instaclone'
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch((err) => {
@@ -85,6 +180,7 @@ mongoose.connect(MONGODB_URI, {
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
+app.use('/api/chats', require('./routes/chatRoutes'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -106,6 +202,6 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 }); 
