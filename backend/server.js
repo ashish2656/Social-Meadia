@@ -106,10 +106,11 @@ function broadcastToChat(chatId, message, excludeUserId = null) {
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? [
-        'https://social-meadia.vercel.app',
-        'https://social-media-frontend-fnjj.vercel.app',
-        'https://social-meadia-zg52-fyoplnw1j-ashishs-projects-9530e095.vercel.app',
-        /\.vercel\.app$/  // Allow all Vercel preview domains
+        'https://socialmeadias.netlify.app',
+        /\.netlify\.app$/,
+        'http://localhost:3000',
+        'http://localhost:8000',
+        'http://localhost:8080'
       ]
     : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:8080', 'http://127.0.0.1:8080'],
   credentials: true,

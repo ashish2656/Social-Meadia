@@ -9,7 +9,16 @@ const UPLOADS_BASE_URL = window.location.hostname === 'localhost' || window.loca
 
 class Api {
     constructor() {
-        this.baseUrl = API_URL;
+        // Update baseUrl to handle Netlify domain
+        this.baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8000'
+            : 'https://social-media-backend-fnjj.onrender.com';
+
+        // Log the API base URL and hostname for debugging
+        console.log('API Base URL:', this.baseUrl);
+        console.log('Current hostname:', window.location.hostname);
+        console.log('Environment:', process.env.NODE_ENV);
+        
         this.token = localStorage.getItem('token');
     }
 
