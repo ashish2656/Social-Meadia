@@ -84,6 +84,11 @@ class Auth {
                 password: formData.get('password')
             };
 
+            // Validate input
+            if (!credentials.email || !credentials.password) {
+                throw new Error('Please fill in all fields');
+            }
+
             const user = await api.login(credentials);
             this.setAuthState(true, user);
 
@@ -94,7 +99,7 @@ class Auth {
             window.location.href = 'index.html';
         } catch (error) {
             console.error('Login error:', error);
-            errorDiv.textContent = error.message || 'Invalid email or password';
+            errorDiv.textContent = error.message || 'An error occurred during login. Please try again.';
             errorDiv.style.display = 'block';
         }
     }
@@ -112,6 +117,15 @@ class Auth {
                 email: formData.get('email'),
                 password: formData.get('password')
             };
+
+            // Validate input
+            if (!userData.username || !userData.email || !userData.password) {
+                throw new Error('Please fill in all fields');
+            }
+
+            if (userData.password.length < 6) {
+                throw new Error('Password must be at least 6 characters long');
+            }
 
             const user = await api.register(userData);
             this.setAuthState(true, user);

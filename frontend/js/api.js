@@ -48,11 +48,11 @@ class Api {
         const headers = this.getHeaders(isFormData);
 
         try {
-            // Debug request
             console.log('Making API request:', {
                 url,
                 method: options.method || 'GET',
-                headers
+                headers,
+                body: options.body ? (isFormData ? '[FormData]' : JSON.parse(options.body)) : undefined
             });
 
             const response = await fetch(url, {
@@ -63,9 +63,19 @@ class Api {
                 }
             });
 
-            const data = await response.json();
-            
-            // Debug response
+            let data;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    data = { message: text };
+                }
+            }
+
             console.log('API Response:', {
                 status: response.status,
                 statusText: response.statusText,
@@ -73,17 +83,22 @@ class Api {
             });
 
             if (!response.ok) {
-                if (response.status === 401) {
-                    this.clearToken();
-                    window.location.href = 'index.html';
-                    return;
-                }
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                const error = new Error(data.message || `HTTP error! status: ${response.status}`);
+                error.status = response.status;
+                error.data = data;
+                throw error;
             }
 
             return { data };
         } catch (error) {
             console.error('API request failed:', error);
+            if (error.status === 401) {
+                this.clearToken();
+                // Only redirect for non-auth endpoints
+                if (!endpoint.includes('/auth/')) {
+                    window.location.href = 'index.html';
+                }
+            }
             throw error;
         }
     }
@@ -144,14 +159,20 @@ class Api {
         try {
             const { data } = await this.post('/api/auth/login', credentials);
             
-            if (!data.token || !data.user) {
+            if (!data || !data.token) {
                 throw new Error('Invalid response format from login');
             }
 
             this.setToken(data.token);
-            return data.user;
+            return data.user || {
+                email: credentials.email,
+                // Other user fields will be fetched by getCurrentUser
+            };
         } catch (error) {
             console.error('Login API error:', error);
+            if (error.status === 401) {
+                throw new Error('Invalid email or password');
+            }
             throw error;
         }
     }
