@@ -188,23 +188,27 @@
         </div>
     </div>
 
+    <!-- Load scripts in correct order -->
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/feed.js"></script>
-    <script src="js/profile.js"></script>
-    <script src="js/upload.js"></script>
     <script src="js/components/Chat.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/components/Profile.js"></script>
+    <script src="js/upload.js"></script>
+    <script src="js/feed.js"></script>
     <script>
-        // Initialize feed
+        // Initialize app
         document.addEventListener('DOMContentLoaded', () => {
             // Check authentication status and show appropriate view
             if (auth.isAuthenticated) {
-                feed.loadPosts();
                 document.getElementById('feed-container').classList.remove('hidden');
                 document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('nav-items').classList.remove('hidden');
+                if (window.feed) {
+                    feed.loadPosts();
+                }
             } else {
                 auth.showAuth();
+                document.getElementById('nav-items').classList.add('hidden');
             }
         });
     </script>

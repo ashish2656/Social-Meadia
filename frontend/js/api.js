@@ -60,7 +60,8 @@ class Api {
     async post(endpoint, body) {
         return this.request(endpoint, {
             method: 'POST',
-            body: JSON.stringify(body)
+            body: body instanceof FormData ? body : JSON.stringify(body),
+            headers: body instanceof FormData ? {} : undefined
         });
     }
 
@@ -239,4 +240,5 @@ class Api {
     }
 }
 
-const api = new ApiService(); 
+// Create a global instance
+window.api = new Api(); 

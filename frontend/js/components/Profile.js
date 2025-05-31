@@ -331,4 +331,5 @@ class Profile {
   }
 }
 
-export default Profile; 
+// Make Profile globally available
+window.Profile = Profile; 

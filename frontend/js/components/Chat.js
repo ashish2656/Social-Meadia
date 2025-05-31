@@ -725,4 +725,5 @@ class Chat {
   }
 }
 
-export default Chat; 
+// Make Chat globally available
+window.Chat = Chat; 

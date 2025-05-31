@@ -1,178 +1,143 @@
 class Feed {
     constructor() {
-        this.postsContainer = document.querySelector('.posts');
+        this.posts = [];
+        this.container = document.querySelector('.posts');
+        this.isLoading = false;
+        this.page = 1;
+        this.hasMore = true;
     }
 
-    async loadPosts() {
+    async loadPosts(page = 1) {
+        if (this.isLoading || (!this.hasMore && page > 1)) return;
+
         try {
-            const posts = await api.getFeed();
-            this.renderPosts(posts);
+            this.isLoading = true;
+            const response = await api.get(`/api/posts/feed?page=${page}`);
+            const newPosts = response.data;
+
+            if (page === 1) {
+                this.posts = newPosts;
+            } else {
+                this.posts = [...this.posts, ...newPosts];
+            }
+
+            this.hasMore = newPosts.length === 10; // Assuming 10 posts per page
+            this.page = page;
+            this.render();
         } catch (error) {
-            console.error('Error loading feed:', error);
-            alert('Error loading feed. Please try again later.');
+            console.error('Error loading posts:', error);
+        } finally {
+            this.isLoading = false;
         }
     }
 
-    renderPosts(posts) {
-        this.postsContainer.innerHTML = posts.map(post => this.createPostHTML(post)).join('');
-        this.bindPostEvents();
-    }
+    render() {
+        if (!this.container) return;
 
-    createPostHTML(post) {
-        return `
-            <div class="post" data-post-id="${post._id}">
+        if (this.posts.length === 0) {
+            this.container.innerHTML = `
+                <div class="text-center py-xl">
+                    <i class="fas fa-camera text-4xl text-secondary"></i>
+                    <p class="mt-md text-secondary">No posts yet</p>
+                </div>
+            `;
+            return;
+        }
+
+        this.container.innerHTML = this.posts.map(post => `
+            <div class="post">
                 <div class="post-header">
-                    <img src="${post.user.profilePicture || 'images/default-profile.png'}" alt="${post.user.username}">
-                    <a href="#" class="profile-link" data-username="${post.user.username}">${post.user.username}</a>
+                    <img src="${post.user.profilePic || 'images/default-profile.png'}" alt="${post.user.username}">
+                    <a href="profile.html?username=${post.user.username}">${post.user.username}</a>
                 </div>
                 <div class="post-image">
-                    <img src="${UPLOADS_BASE_URL}/uploads/${post.image}" alt="Post">
+                    <img src="${post.image}" alt="${post.caption || ''}">
                 </div>
                 <div class="post-actions">
-                    <button class="like-button ${post.likes.includes(auth.currentUser._id) ? 'liked' : ''}">
-                        <i class="fas ${post.likes.includes(auth.currentUser._id) ? 'fa-heart' : 'fa-heart-o'}"></i>
+                    <button class="like-button ${post.isLiked ? 'active' : ''}" onclick="feed.handleLike('${post._id}', this)">
+                        <i class="fas fa-heart"></i>
                     </button>
-                    <button class="comment-button">
-                        <i class="far fa-comment"></i>
+                    <button class="comment-button" onclick="feed.showComments('${post._id}')">
+                        <i class="fas fa-comment"></i>
                     </button>
                     <button class="share-button">
-                        <i class="far fa-share-square"></i>
+                        <i class="fas fa-share"></i>
                     </button>
                 </div>
                 <div class="post-likes">
-                    ${post.likes.length} likes
+                    ${post.likesCount} likes
                 </div>
                 <div class="post-caption">
-                    <strong>${post.user.username}</strong> ${post.caption}
+                    <strong>${post.user.username}</strong> ${post.caption || ''}
                 </div>
-                <div class="post-comments">
-                    ${this.renderComments(post.comments)}
-                    <form class="comment-form">
-                        <input type="text" placeholder="Add a comment..." required>
-                        <button type="submit">Post</button>
-                    </form>
+                <div class="post-comments" id="comments-${post._id}">
+                    <!-- Comments will be loaded here -->
                 </div>
-            </div>
-        `;
-    }
-
-    renderComments(comments) {
-        return comments.map(comment => `
-            <div class="comment" data-comment-id="${comment._id}">
-                <strong>${comment.user.username}</strong> ${comment.text}
-                ${comment.user._id === auth.currentUser._id ? 
-                    `<button class="delete-comment">×</button>` : 
-                    ''}
             </div>
         `).join('');
+
+        // Add infinite scroll
+        if (this.hasMore) {
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !this.isLoading) {
+                    this.loadPosts(this.page + 1);
+                }
+            });
+
+            observer.observe(this.container.lastElementChild);
+        }
     }
 
-    bindPostEvents() {
-        // Like buttons
-        this.postsContainer.querySelectorAll('.like-button').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const postId = e.target.closest('.post').dataset.postId;
-                try {
-                    await api.likePost(postId);
-                    const isLiked = button.classList.toggle('liked');
-                    button.querySelector('i').classList.toggle('fa-heart-o', !isLiked);
-                    button.querySelector('i').classList.toggle('fa-heart', isLiked);
-                    
-                    const likesElement = button.closest('.post').querySelector('.post-likes');
-                    const currentLikes = parseInt(likesElement.textContent);
-                    likesElement.textContent = `${isLiked ? currentLikes + 1 : currentLikes - 1} likes`;
-                } catch (error) {
-                    alert('Error updating like. Please try again.');
-                }
-            });
-        });
-
-        // Comment forms
-        this.postsContainer.querySelectorAll('.comment-form').forEach(form => {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const postId = e.target.closest('.post').dataset.postId;
-                const input = e.target.querySelector('input');
-                const text = input.value;
-
-                try {
-                    const comment = await api.addComment(postId, text);
-                    const commentsContainer = e.target.closest('.post-comments');
-                    const commentHTML = this.renderComments([comment]);
-                    commentsContainer.insertAdjacentHTML('beforeend', commentHTML);
-                    input.value = '';
-                } catch (error) {
-                    alert('Error adding comment. Please try again.');
-                }
-            });
-        });
-
-        // Delete comment buttons
-        this.postsContainer.querySelectorAll('.delete-comment').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const postId = e.target.closest('.post').dataset.postId;
-                const commentId = e.target.closest('.comment').dataset.commentId;
-
-                try {
-                    await api.deleteComment(postId, commentId);
-                    e.target.closest('.comment').remove();
-                } catch (error) {
-                    alert('Error deleting comment. Please try again.');
-                }
-            });
-        });
-
-        // Profile links
-        this.postsContainer.querySelectorAll('.profile-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const username = link.dataset.username;
-                profile.loadProfile(username);
-            });
-        });
-
-        // Share buttons
-        this.postsContainer.querySelectorAll('.share-button').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const post = e.target.closest('.post');
-                const postId = post.dataset.postId;
-                const imageUrl = post.querySelector('.post-image img').src;
-                const caption = post.querySelector('.post-caption').textContent;
-                
-                if (navigator.share) {
-                    try {
-                        await navigator.share({
-                            title: 'Check out this post!',
-                            text: caption,
-                            url: imageUrl
-                        });
-                    } catch (error) {
-                        if (error.name !== 'AbortError') {
-                            console.error('Error sharing:', error);
-                            this.fallbackShare(imageUrl);
-                        }
-                    }
-                } else {
-                    this.fallbackShare(imageUrl);
-                }
-            });
-        });
+    async handleLike(postId, button) {
+        try {
+            const response = await api.post(`/api/posts/${postId}/like`);
+            button.classList.toggle('active', response.data.isLiked);
+            button.closest('.post').querySelector('.post-likes').textContent = 
+                `${response.data.likesCount} likes`;
+        } catch (error) {
+            console.error('Error liking post:', error);
+        }
     }
 
-    fallbackShare(url) {
-        // Create a temporary input element
-        const input = document.createElement('input');
-        input.value = url;
-        document.body.appendChild(input);
-        
-        // Copy the URL
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        
-        // Show feedback
-        alert('Link copied to clipboard!');
+    async showComments(postId) {
+        const commentsContainer = document.getElementById(`comments-${postId}`);
+        if (!commentsContainer) return;
+
+        try {
+            const response = await api.get(`/api/posts/${postId}/comments`);
+            commentsContainer.innerHTML = `
+                ${response.data.map(comment => `
+                    <div class="comment">
+                        <strong>${comment.user.username}</strong> ${comment.content}
+                    </div>
+                `).join('')}
+                <form onsubmit="feed.handleComment(event, '${postId}')" class="comment-form">
+                    <input type="text" placeholder="Add a comment..." required>
+                    <button type="submit" class="btn btn-primary">Post</button>
+                </form>
+            `;
+        } catch (error) {
+            console.error('Error loading comments:', error);
+        }
+    }
+
+    async handleComment(event, postId) {
+        event.preventDefault();
+        const form = event.target;
+        const input = form.querySelector('input');
+        const content = input.value.trim();
+
+        if (!content) return;
+
+        try {
+            const response = await api.post(`/api/posts/${postId}/comments`, { content });
+            input.value = '';
+            this.showComments(postId);
+        } catch (error) {
+            console.error('Error adding comment:', error);
+        }
     }
 }
 
-const feed = new Feed(); 
+// Initialize feed
+window.feed = new Feed(); 
