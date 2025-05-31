@@ -70,11 +70,26 @@ class ApiService {
     }
 
     async createPost(formData) {
-        return this.request('/posts', {
-            method: 'POST',
-            headers: {},
-            body: formData
-        });
+        const url = `${API_URL}/posts`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${this.token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Error creating post');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Create post error:', error);
+            throw error;
+        }
     }
 
     async likePost(postId) {

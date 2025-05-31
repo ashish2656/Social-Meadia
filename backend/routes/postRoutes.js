@@ -2,16 +2,25 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const Post = require('../models/Post');
 const { protect } = require('../middleware/auth');
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true, mode: 0o755 });
+}
 
 // Set up multer for file upload
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, uploadsDir);
   },
   filename: function(req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+    // Sanitize filename
+    const sanitizedFilename = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
+    cb(null, sanitizedFilename);
   }
 });
 
@@ -19,7 +28,7 @@ const upload = multer({
   storage: storage,
   fileFilter: function(req, file, cb) {
     // Check file type
-    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
       return cb(new Error('Only image files (jpg, jpeg, png, gif) are allowed!'), false);
     }
     cb(null, true);
@@ -33,8 +42,9 @@ const upload = multer({
 router.post('/', protect, (req, res) => {
   upload(req, res, async function(err) {
     try {
+      // Handle multer errors
       if (err instanceof multer.MulterError) {
-        // A Multer error occurred when uploading
+        console.error('Multer error:', err);
         if (err.code === 'LIMIT_FILE_SIZE') {
           return res.status(400).json({ 
             message: 'File too large',
@@ -46,7 +56,7 @@ router.post('/', protect, (req, res) => {
           details: err.message
         });
       } else if (err) {
-        // An unknown error occurred
+        console.error('Unknown upload error:', err);
         return res.status(400).json({ 
           message: 'File upload error',
           details: err.message
@@ -61,24 +71,38 @@ router.post('/', protect, (req, res) => {
         });
       }
 
-      const { caption } = req.body;
-
+      // Create post
       const post = await Post.create({
         user: req.user.id,
         image: req.file.filename,
-        caption: caption || ''
+        caption: req.body.caption || ''
       });
 
-      res.status(201).json(post);
+      // Return the created post
+      const populatedPost = await Post.findById(post._id)
+        .populate('user', 'username profilePicture');
+
+      res.status(201).json(populatedPost);
     } catch (error) {
       console.error('Post creation error:', {
         error: error.message,
         stack: error.stack,
-        userId: req.user?._id
+        userId: req.user?._id,
+        file: req.file
       });
+
+      // If there was an error and a file was uploaded, try to delete it
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (unlinkError) {
+          console.error('Error deleting file after failed post creation:', unlinkError);
+        }
+      }
+
       res.status(500).json({ 
         message: 'Error creating post',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
   });

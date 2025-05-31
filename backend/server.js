@@ -11,26 +11,14 @@ dotenv.config();
 // Create Express app
 const app = express();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-try {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-  // Check if directory is writable
-  fs.accessSync(uploadsDir, fs.constants.W_OK);
-  console.log('Uploads directory is ready:', uploadsDir);
-} catch (error) {
-  console.error('Error setting up uploads directory:', error);
-  process.exit(1);
-}
-
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? [/\.vercel\.app$/, 'https://social-meadia.vercel.app']  // This will allow all Vercel domains and your specific domain
+    ? ['https://social-meadia.vercel.app', 'https://social-media-frontend-fnjj.vercel.app']
     : ['http://localhost:8080', 'http://127.0.0.1:8080'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Handle JSON and URL-encoded data for non-multipart requests
@@ -49,27 +37,27 @@ app.use((req, res, next) => {
   }
 });
 
-// Serve static files with error handling
-app.use('/uploads', (req, res, next) => {
-  const filePath = path.join(uploadsDir, req.path);
-  // Prevent directory traversal
-  if (!filePath.startsWith(uploadsDir)) {
-    return res.status(403).json({ message: 'Access denied' });
+// Ensure uploads directory exists with proper permissions
+const uploadsDir = path.join(__dirname, 'uploads');
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true, mode: 0o755 });
   }
-  express.static(uploadsDir)(req, res, (err) => {
-    if (err) {
-      console.error('Static file error:', {
-        path: req.path,
-        error: err.message
-      });
-      if (err.code === 'ENOENT') {
-        return res.status(404).json({ message: 'File not found' });
-      }
-      return res.status(500).json({ message: 'Error serving file' });
-    }
-    next();
-  });
-});
+  // Check if directory is writable
+  fs.accessSync(uploadsDir, fs.constants.W_OK);
+  console.log('Uploads directory is ready:', uploadsDir);
+} catch (error) {
+  console.error('Error setting up uploads directory:', error);
+  process.exit(1);
+}
+
+// Serve static files with proper headers
+app.use('/uploads', express.static(uploadsDir, {
+  setHeaders: (res, path) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Ashish:@Ashish5151@socialmeadia.73eeui8.mongodb.net/?retryWrites=true&w=majority';
