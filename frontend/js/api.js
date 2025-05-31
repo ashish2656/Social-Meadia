@@ -89,7 +89,7 @@ class Api {
                 throw error;
             }
 
-            return { data };
+            return data;
         } catch (error) {
             console.error('API request failed:', error);
             if (error.status === 401) {
@@ -136,50 +136,60 @@ class Api {
     // Auth endpoints
     async register(userData) {
         try {
-            const { data } = await this.post('/api/auth/register', {
-                username: userData.username,
-                email: userData.email,
-                password: userData.password,
-                fullName: userData.username
+            const data = await this.request('/api/auth/register', {
+                method: 'POST',
+                body: JSON.stringify({
+                    username: userData.username,
+                    email: userData.email,
+                    password: userData.password
+                })
             });
 
-            if (!data.token || !data.user) {
+            if (!data || !data.token) {
                 throw new Error('Invalid response format from register');
             }
 
             this.setToken(data.token);
-            return data.user;
+            return {
+                _id: data._id,
+                username: data.username,
+                email: data.email
+            };
         } catch (error) {
             console.error('Registration API error:', error);
-            throw error;
+            throw new Error(error.message || 'Registration failed');
         }
     }
 
     async login(credentials) {
         try {
-            const { data } = await this.post('/api/auth/login', credentials);
+            const data = await this.request('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify(credentials)
+            });
             
             if (!data || !data.token) {
                 throw new Error('Invalid response format from login');
             }
 
             this.setToken(data.token);
-            return data.user || {
-                email: credentials.email,
-                // Other user fields will be fetched by getCurrentUser
+            return {
+                _id: data._id,
+                username: data.username,
+                email: data.email
             };
         } catch (error) {
             console.error('Login API error:', error);
             if (error.status === 401) {
                 throw new Error('Invalid email or password');
             }
-            throw error;
+            throw new Error(error.message || 'Login failed');
         }
     }
 
     async getCurrentUser() {
         try {
-            const { data } = await this.get('/api/users/me');
+            const data = await this.request('/api/users/me');
             return data;
         } catch (error) {
             console.error('Get current user error:', error);

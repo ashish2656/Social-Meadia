@@ -96,7 +96,7 @@ class Auth {
             form.reset();
 
             // Redirect to home page
-            window.location.href = 'index.html';
+            window.location.reload();
         } catch (error) {
             console.error('Login error:', error);
             errorDiv.textContent = error.message || 'An error occurred during login. Please try again.';
@@ -134,7 +134,7 @@ class Auth {
             form.reset();
 
             // Redirect to home page
-            window.location.href = 'index.html';
+            window.location.reload();
         } catch (error) {
             console.error('Registration error:', error);
             errorDiv.textContent = error.message || 'Error creating account. Please try again.';
