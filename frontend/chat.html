@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - InstaClone</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-wrapper">
+            <div class="logo">
+                <a href="index.html">InstaClone</a>
+            </div>
+            <div class="nav-items" id="nav-items">
+                <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+                <a href="chat.html" class="nav-link active"><i class="fas fa-comments"></i> Chat</a>
+                <a href="upload.html" class="nav-link"><i class="fas fa-plus-square"></i> Upload</a>
+                <a href="profile.html" class="nav-link"><i class="fas fa-user"></i> Profile</a>
+                <a href="#" class="nav-link" id="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="chat-wrapper">
+                <div class="chat-sidebar">
+                    <div class="chat-header">
+                        <button class="btn btn-primary w-full" id="new-chat-btn">
+                            <i class="fas fa-edit"></i> New Message
+                        </button>
+                    </div>
+                    <div class="chat-list" id="chat-list">
+                        <!-- Chat list items will be added here -->
+                    </div>
+                </div>
+                <div class="chat-main">
+                    <div id="empty-chat-state" class="flex-center">
+                        <div class="text-center">
+                            <i class="fas fa-comments text-6xl mb-4"></i>
+                            <h2>Your Messages</h2>
+                            <p>Send private photos and messages to a friend or group</p>
+                        </div>
+                    </div>
+                    <div id="active-chat" class="hidden">
+                        <div class="chat-header" id="chat-header">
+                            <!-- Active chat header will be added here -->
+                        </div>
+                        <div class="messages-container" id="messages-container">
+                            <!-- Messages will be added here -->
+                        </div>
+                        <div class="chat-input-container">
+                            <form id="message-form" class="message-form">
+                                <button type="button" class="btn" id="attachment-btn">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <input type="text" placeholder="Type a message..." id="message-input">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Interface (Hidden by default) -->
+        <div id="call-interface" class="hidden">
+            <div class="call-container">
+                <div class="call-streams">
+                    <video id="remote-video" autoplay playsinline></video>
+                    <video id="local-video" autoplay playsinline muted></video>
+                </div>
+                <div class="call-controls">
+                    <button class="btn btn-circle" id="toggle-audio">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="btn btn-circle" id="toggle-video">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="btn btn-circle btn-danger" id="end-call">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/components/Chat.js"></script>
+    <script>
+        // Initialize chat
+        document.addEventListener('DOMContentLoaded', () => {
+            const chat = new Chat();
+            chat.init();
+        });
+    </script>
+</body>
+</html> 

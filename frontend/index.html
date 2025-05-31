@@ -12,13 +12,13 @@
     <nav class="navbar">
         <div class="nav-wrapper">
             <div class="logo">
-                <h1>InstaClone</h1>
+                <a href="index.html">InstaClone</a>
             </div>
             <div class="nav-items" id="nav-items">
-                <a href="#" class="nav-link" id="home-link"><i class="fas fa-home"></i> Home</a>
-                <a href="#" class="nav-link" id="chat-link"><i class="fas fa-comments"></i> Chat</a>
-                <a href="#" class="nav-link" id="upload-link"><i class="fas fa-plus-square"></i> Upload</a>
-                <a href="#" class="nav-link" id="profile-link"><i class="fas fa-user"></i> Profile</a>
+                <a href="index.html" class="nav-link active"><i class="fas fa-home"></i> Home</a>
+                <a href="chat.html" class="nav-link"><i class="fas fa-comments"></i> Chat</a>
+                <a href="upload.html" class="nav-link"><i class="fas fa-plus-square"></i> Upload</a>
+                <a href="profile.html" class="nav-link"><i class="fas fa-user"></i> Profile</a>
                 <a href="#" class="nav-link" id="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
@@ -32,7 +32,7 @@
                 <form id="login-form">
                     <input type="email" placeholder="Email" required>
                     <input type="password" placeholder="Password" required>
-                    <button type="submit">Login</button>
+                    <button type="submit" class="btn btn-primary">Login</button>
                 </form>
                 <p>Don't have an account? <a href="#" id="show-register">Register</a></p>
             </div>
@@ -43,7 +43,7 @@
                     <input type="text" placeholder="Username" required>
                     <input type="email" placeholder="Email" required>
                     <input type="password" placeholder="Password" required>
-                    <button type="submit">Register</button>
+                    <button type="submit" class="btn btn-primary">Register</button>
                 </form>
                 <p>Already have an account? <a href="#" id="show-login">Login</a></p>
             </div>
@@ -195,5 +195,18 @@
     <script src="js/upload.js"></script>
     <script src="js/components/Chat.js"></script>
     <script src="js/main.js"></script>
+    <script>
+        // Initialize feed
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check authentication status and show appropriate view
+            if (auth.isAuthenticated) {
+                feed.loadPosts();
+                document.getElementById('feed-container').classList.remove('hidden');
+                document.getElementById('auth-container').classList.add('hidden');
+            } else {
+                auth.showAuth();
+            }
+        });
+    </script>
 </body>
 </html> 

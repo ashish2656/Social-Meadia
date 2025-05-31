@@ -1,22 +1,55 @@
 class Auth {
     constructor() {
-        this.isAuthenticated = !!localStorage.getItem('token');
-        this.currentUser = JSON.parse(localStorage.getItem('user'));
-        this.bindEvents();
+        this.currentUser = null;
+        this.token = localStorage.getItem('token');
+        this.isAuthenticated = !!this.token;
+
+        // Get DOM elements
+        this.authContainer = document.getElementById('auth-container');
+        this.loginForm = document.getElementById('login-form');
+        this.registerForm = document.getElementById('register-form');
+        this.showLoginBtn = document.getElementById('show-login');
+        this.showRegisterBtn = document.getElementById('show-register');
+        this.logoutBtn = document.getElementById('logout-link');
+
+        // Initialize
+        this.init();
     }
 
-    bindEvents() {
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const showRegisterLink = document.getElementById('show-register');
-        const showLoginLink = document.getElementById('show-login');
-        const logoutLink = document.getElementById('logout-link');
+    init() {
+        // Add event listeners
+        if (this.loginForm) {
+            this.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+        }
+        if (this.registerForm) {
+            this.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
+        }
+        if (this.showLoginBtn) {
+            this.showLoginBtn.addEventListener('click', () => this.toggleAuthForms('login'));
+        }
+        if (this.showRegisterBtn) {
+            this.showRegisterBtn.addEventListener('click', () => this.toggleAuthForms('register'));
+        }
+        if (this.logoutBtn) {
+            this.logoutBtn.addEventListener('click', (e) => this.handleLogout(e));
+        }
 
-        loginForm.addEventListener('submit', (e) => this.handleLogin(e));
-        registerForm.addEventListener('submit', (e) => this.handleRegister(e));
-        showRegisterLink.addEventListener('click', () => this.toggleAuthForms());
-        showLoginLink.addEventListener('click', () => this.toggleAuthForms());
-        logoutLink.addEventListener('click', () => this.handleLogout());
+        // Check authentication status
+        if (this.isAuthenticated) {
+            this.loadUser();
+        }
+    }
+
+    async loadUser() {
+        try {
+            const response = await api.get('/api/users/me');
+            this.currentUser = response.data;
+            this.isAuthenticated = true;
+            this.onAuthStateChange();
+        } catch (error) {
+            console.error('Error loading user:', error);
+            this.logout();
+        }
     }
 
     async handleLogin(e) {
@@ -26,11 +59,15 @@ class Auth {
         const password = form.querySelector('input[type="password"]').value;
 
         try {
-            const response = await api.login({ email, password });
-            this.setCurrentUser(response);
-            this.showFeed();
+            const response = await api.post('/api/auth/login', { email, password });
+            this.setSession(response.data.token);
+            this.currentUser = response.data.user;
+            this.isAuthenticated = true;
+            this.onAuthStateChange();
+            window.location.reload();
         } catch (error) {
-            alert(error.message);
+            console.error('Login error:', error);
+            alert('Invalid email or password');
         }
     }
 
@@ -42,47 +79,67 @@ class Auth {
         const password = form.querySelector('input[type="password"]').value;
 
         try {
-            const response = await api.register({ username, email, password });
-            this.setCurrentUser(response);
-            this.showFeed();
+            const response = await api.post('/api/auth/register', {
+                username,
+                email,
+                password
+            });
+            this.setSession(response.data.token);
+            this.currentUser = response.data.user;
+            this.isAuthenticated = true;
+            this.onAuthStateChange();
+            window.location.reload();
         } catch (error) {
-            alert(error.message);
+            console.error('Registration error:', error);
+            alert('Error creating account. Please try again.');
         }
     }
 
-    handleLogout() {
-        api.clearToken();
-        localStorage.removeItem('user');
-        this.isAuthenticated = false;
+    handleLogout(e) {
+        e.preventDefault();
+        this.logout();
+        window.location.href = 'index.html';
+    }
+
+    setSession(token) {
+        localStorage.setItem('token', token);
+        this.token = token;
+    }
+
+    logout() {
+        localStorage.removeItem('token');
+        this.token = null;
         this.currentUser = null;
-        this.showAuth();
+        this.isAuthenticated = false;
+        this.onAuthStateChange();
     }
 
-    setCurrentUser(userData) {
-        this.currentUser = userData;
-        this.isAuthenticated = true;
-        localStorage.setItem('user', JSON.stringify(userData));
-        api.setToken(userData.token);
-    }
-
-    toggleAuthForms() {
-        const authForms = document.querySelectorAll('.auth-form');
-        authForms.forEach(form => form.classList.toggle('hidden'));
+    toggleAuthForms(show) {
+        const forms = this.authContainer.querySelectorAll('.auth-form');
+        forms.forEach(form => {
+            form.classList.add('hidden');
+        });
+        if (show === 'login') {
+            forms[0].classList.remove('hidden');
+        } else {
+            forms[1].classList.remove('hidden');
+        }
     }
 
     showAuth() {
-        document.getElementById('auth-container').classList.remove('hidden');
-        document.getElementById('feed-container').classList.add('hidden');
-        document.getElementById('profile-container').classList.add('hidden');
-        document.getElementById('upload-container').classList.add('hidden');
-        document.getElementById('nav-items').classList.add('hidden');
+        if (this.authContainer) {
+            this.authContainer.classList.remove('hidden');
+        }
     }
 
-    showFeed() {
-        document.getElementById('auth-container').classList.add('hidden');
-        document.getElementById('feed-container').classList.remove('hidden');
-        document.getElementById('nav-items').classList.remove('hidden');
-        feed.loadPosts();
+    onAuthStateChange() {
+        const event = new CustomEvent('authStateChange', {
+            detail: {
+                isAuthenticated: this.isAuthenticated,
+                user: this.currentUser
+            }
+        });
+        window.dispatchEvent(event);
     }
 }
 

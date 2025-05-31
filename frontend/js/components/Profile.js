@@ -1,324 +1,332 @@
 class Profile {
   constructor() {
-    this.currentUser = JSON.parse(localStorage.getItem('user'));
-    this.profileData = null;
-    this.activeTab = 'posts';
-    this.isEditing = false;
+    this.user = null;
+    this.posts = [];
+    this.currentTab = 'posts';
+    this.profileUsername = document.getElementById('profile-username');
+    this.profileBio = document.getElementById('profile-bio');
+    this.profilePic = document.getElementById('profile-pic');
+    this.coverPic = document.getElementById('cover-pic');
+    this.postsCount = document.getElementById('posts-count');
+    this.followersCount = document.getElementById('followers-count');
+    this.followingCount = document.getElementById('following-count');
+    this.editProfileBtn = document.getElementById('edit-profile-btn');
+    this.postsGrid = document.getElementById('profile-posts');
+    this.tabs = document.querySelectorAll('.tab');
   }
 
   async init(username) {
+    if (!auth.isAuthenticated) {
+      window.location.href = 'index.html';
+      return;
+    }
+
     try {
-      // Fetch profile data
-      const response = await fetch(`${API_URL}/users/profile/${username}`);
-      this.profileData = await response.json();
-      
-      this.render();
-      this.attachEventListeners();
+      // Load user profile
+      const response = await api.get(`/api/users/${username}`);
+      this.user = response.data;
+      this.renderProfile();
+
+      // Load user posts
+      await this.loadPosts();
+
+      // Add event listeners
+      this.setupEventListeners();
     } catch (error) {
       console.error('Error loading profile:', error);
-      // Show error message to user
+      window.location.href = 'index.html';
     }
   }
 
-  render() {
-    const isOwnProfile = this.currentUser && this.currentUser.id === this.profileData.id;
-    const main = document.querySelector('main');
-    
-    main.innerHTML = `
-      <div class="profile-header">
-        <div class="profile-cover">
-          <img src="${this.profileData.coverPhoto || '/images/default-cover.jpg'}" alt="Cover photo">
-        </div>
-        
-        <div class="profile-info">
-          <img class="profile-avatar" src="${this.profileData.profilePicture || '/images/default-avatar.jpg'}" alt="Profile picture">
-          
-          <div class="profile-details">
-            <div class="flex items-center gap-md">
-              <h1>${this.profileData.username}</h1>
-              ${isOwnProfile ? `
-                <button class="btn btn-secondary" id="editProfileBtn">
-                  <i class="fas fa-edit"></i> Edit Profile
-                </button>
-              ` : `
-                <button class="btn ${this.profileData.isFollowing ? 'btn-secondary' : 'btn-primary'}" id="followBtn">
-                  ${this.profileData.isFollowing ? 'Following' : 'Follow'}
-                </button>
-                <button class="btn btn-primary" id="messageBtn">
-                  <i class="fas fa-message"></i> Message
-                </button>
-              `}
-            </div>
-            
-            <div class="profile-stats">
-              <div class="stat-item">
-                <div class="stat-value">${this.profileData.postsCount}</div>
-                <div class="stat-label">Posts</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">${this.profileData.followersCount}</div>
-                <div class="stat-label">Followers</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">${this.profileData.followingCount}</div>
-                <div class="stat-label">Following</div>
-              </div>
-            </div>
-            
-            <div class="mt-md">
-              <h2 class="text-lg font-medium">${this.profileData.fullName}</h2>
-              <p class="text-secondary">${this.profileData.bio || ''}</p>
-              ${this.profileData.website ? `
-                <a href="${this.profileData.website}" target="_blank" class="text-primary">
-                  ${this.profileData.website}
-                </a>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
+  renderProfile() {
+    this.profileUsername.textContent = this.user.username;
+    this.profileBio.textContent = this.user.bio || '';
+    this.profilePic.src = this.user.profilePic || 'images/default-profile.png';
+    this.coverPic.src = this.user.coverPic || 'images/default-cover.jpg';
+    this.postsCount.textContent = this.user.postsCount || 0;
+    this.followersCount.textContent = this.user.followersCount || 0;
+    this.followingCount.textContent = this.user.followingCount || 0;
 
-      <div class="tabs">
-        <div class="tab ${this.activeTab === 'posts' ? 'active' : ''}" data-tab="posts">
-          <i class="fas fa-grid"></i> Posts
-        </div>
-        <div class="tab ${this.activeTab === 'saved' ? 'active' : ''}" data-tab="saved">
-          <i class="fas fa-bookmark"></i> Saved
-        </div>
-        <div class="tab ${this.activeTab === 'tagged' ? 'active' : ''}" data-tab="tagged">
-          <i class="fas fa-user-tag"></i> Tagged
-        </div>
-      </div>
+    // Show/hide edit button based on ownership
+    if (this.user._id === auth.currentUser._id) {
+      this.editProfileBtn.classList.remove('hidden');
+    } else {
+      this.editProfileBtn.classList.add('hidden');
+      // Show follow button instead
+      const followBtn = document.createElement('button');
+      followBtn.className = `btn ${this.user.isFollowing ? 'btn-secondary' : 'btn-primary'}`;
+      followBtn.textContent = this.user.isFollowing ? 'Following' : 'Follow';
+      followBtn.onclick = () => this.handleFollow();
+      this.editProfileBtn.parentNode.replaceChild(followBtn, this.editProfileBtn);
+    }
+  }
 
-      <div class="posts-grid" id="postsGrid">
-        ${this.renderPosts()}
-      </div>
-
-      ${this.renderEditProfileModal()}
-    `;
+  async loadPosts() {
+    try {
+      const response = await api.get(`/api/users/${this.user.username}/posts`);
+      this.posts = response.data;
+      this.renderPosts();
+    } catch (error) {
+      console.error('Error loading posts:', error);
+    }
   }
 
   renderPosts() {
-    if (!this.profileData.posts || this.profileData.posts.length === 0) {
-      return `
-        <div class="text-center py-xl">
-          <i class="fas fa-camera text-4xl text-secondary"></i>
-          <p class="mt-md text-secondary">No posts yet</p>
-        </div>
-      `;
-    }
-
-    return this.profileData.posts.map(post => `
-      <div class="post-item" data-post-id="${post._id}">
+    this.postsGrid.innerHTML = '';
+    this.posts.forEach(post => {
+      const postEl = document.createElement('div');
+      postEl.className = 'post-item';
+      postEl.innerHTML = `
         <img src="${post.image}" alt="${post.caption || 'Post image'}">
         <div class="post-overlay">
           <div class="post-stat">
             <i class="fas fa-heart"></i>
-            ${post.likesCount}
+            <span>${post.likesCount}</span>
           </div>
           <div class="post-stat">
             <i class="fas fa-comment"></i>
-            ${post.commentsCount}
+            <span>${post.commentsCount}</span>
           </div>
         </div>
-      </div>
-    `).join('');
+      `;
+      postEl.addEventListener('click', () => this.openPost(post));
+      this.postsGrid.appendChild(postEl);
+    });
   }
 
-  renderEditProfileModal() {
-    if (!this.isEditing) return '';
+  setupEventListeners() {
+    // Tab switching
+    this.tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.currentTab = tab.dataset.tab;
+        this.loadTabContent();
+      });
+    });
 
-    return `
-      <div class="modal" id="editProfileModal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2>Edit Profile</h2>
-            <button class="close-modal">×</button>
-          </div>
-          
-          <form id="editProfileForm" class="modal-body">
-            <div class="form-group">
-              <label class="form-label">Profile Picture</label>
-              <div class="flex items-center gap-md">
-                <img src="${this.profileData.profilePicture || '/images/default-avatar.jpg'}" 
-                     alt="Current profile picture" 
-                     class="w-16 h-16 rounded-full">
-                <input type="file" id="profilePicture" accept="image/*">
-              </div>
-            </div>
+    // Edit profile button
+    if (this.editProfileBtn) {
+      this.editProfileBtn.addEventListener('click', () => this.handleEditProfile());
+    }
 
-            <div class="form-group">
-              <label class="form-label">Cover Photo</label>
-              <input type="file" id="coverPhoto" accept="image/*">
-            </div>
+    // Profile picture upload
+    this.profilePic.addEventListener('click', () => {
+      if (this.user._id === auth.currentUser._id) {
+        this.handleImageUpload('profile');
+      }
+    });
 
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input type="text" class="form-input" id="fullName" 
-                     value="${this.profileData.fullName}" required>
-            </div>
+    // Cover photo upload
+    this.coverPic.addEventListener('click', () => {
+      if (this.user._id === auth.currentUser._id) {
+        this.handleImageUpload('cover');
+      }
+    });
+  }
 
-            <div class="form-group">
-              <label class="form-label">Username</label>
-              <input type="text" class="form-input" id="username" 
-                     value="${this.profileData.username}" required>
-            </div>
+  async loadTabContent() {
+    switch (this.currentTab) {
+      case 'posts':
+        await this.loadPosts();
+        break;
+      case 'saved':
+        await this.loadSavedPosts();
+        break;
+      case 'tagged':
+        await this.loadTaggedPosts();
+        break;
+    }
+  }
 
-            <div class="form-group">
-              <label class="form-label">Bio</label>
-              <textarea class="form-input" id="bio" rows="3">${this.profileData.bio || ''}</textarea>
-            </div>
+  async loadSavedPosts() {
+    try {
+      const response = await api.get('/api/posts/saved');
+      this.posts = response.data;
+      this.renderPosts();
+    } catch (error) {
+      console.error('Error loading saved posts:', error);
+    }
+  }
 
-            <div class="form-group">
-              <label class="form-label">Website</label>
-              <input type="url" class="form-input" id="website" 
-                     value="${this.profileData.website || ''}">
-            </div>
+  async loadTaggedPosts() {
+    try {
+      const response = await api.get(`/api/users/${this.user.username}/tagged`);
+      this.posts = response.data;
+      this.renderPosts();
+    } catch (error) {
+      console.error('Error loading tagged posts:', error);
+    }
+  }
 
-            <div class="form-group">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-input" id="email" 
-                     value="${this.profileData.email}" required>
-            </div>
+  async handleFollow() {
+    try {
+      const response = await api.post(`/api/users/${this.user.username}/follow`);
+      this.user.isFollowing = response.data.isFollowing;
+      this.user.followersCount = response.data.followersCount;
+      this.renderProfile();
+    } catch (error) {
+      console.error('Error following user:', error);
+    }
+  }
 
-            <div class="form-group">
-              <label class="form-check">
-                <input type="checkbox" id="isPrivate" 
-                       ${this.profileData.isPrivate ? 'checked' : ''}>
-                <span class="ml-sm">Private Account</span>
-              </label>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save Changes</button>
-            </div>
-          </form>
-        </div>
+  handleEditProfile() {
+    // Create modal for editing profile
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>Edit Profile</h2>
+        <form id="edit-profile-form">
+          <input type="text" name="username" placeholder="Username" value="${this.user.username}">
+          <textarea name="bio" placeholder="Bio">${this.user.bio || ''}</textarea>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn" onclick="this.parentElement.parentElement.remove()">Cancel</button>
+        </form>
       </div>
     `;
+
+    document.body.appendChild(modal);
+
+    const form = modal.querySelector('form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      try {
+        const response = await api.put('/api/users/profile', {
+          username: formData.get('username'),
+          bio: formData.get('bio')
+        });
+        this.user = response.data;
+        this.renderProfile();
+        modal.remove();
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        alert('Error updating profile');
+      }
+    });
   }
 
-  attachEventListeners() {
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        this.activeTab = tab.dataset.tab;
-        this.render();
-      });
-    });
+  handleImageUpload(type) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-    // Post click
-    document.querySelectorAll('.post-item').forEach(post => {
-      post.addEventListener('click', () => {
-        // Show post detail modal
-        const postId = post.dataset.postId;
-        // Implement post detail view
-      });
-    });
+      const formData = new FormData();
+      formData.append('image', file);
 
-    // Follow/Unfollow
-    const followBtn = document.getElementById('followBtn');
-    if (followBtn) {
-      followBtn.addEventListener('click', async () => {
-        try {
-          const action = this.profileData.isFollowing ? 'unfollow' : 'follow';
-          await fetch(`${API_URL}/users/${action}/${this.profileData.id}`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-
-          this.profileData.isFollowing = !this.profileData.isFollowing;
-          this.profileData.followersCount += this.profileData.isFollowing ? 1 : -1;
-          this.render();
-        } catch (error) {
-          console.error('Error updating follow status:', error);
-        }
-      });
-    }
-
-    // Message
-    const messageBtn = document.getElementById('messageBtn');
-    if (messageBtn) {
-      messageBtn.addEventListener('click', async () => {
-        try {
-          const response = await fetch(`${API_URL}/chats/individual`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              recipientId: this.profileData.id
-            })
-          });
-
-          const chat = await response.json();
-          // Navigate to chat
-          window.location.href = `/chat/${chat._id}`;
-        } catch (error) {
-          console.error('Error creating chat:', error);
-        }
-      });
-    }
-
-    // Edit Profile
-    const editProfileBtn = document.getElementById('editProfileBtn');
-    if (editProfileBtn) {
-      editProfileBtn.addEventListener('click', () => {
-        this.isEditing = true;
-        this.render();
-      });
-    }
-
-    // Edit Profile Form
-    const editProfileForm = document.getElementById('editProfileForm');
-    if (editProfileForm) {
-      editProfileForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        try {
-          const formData = new FormData();
-          const profilePicture = document.getElementById('profilePicture').files[0];
-          const coverPhoto = document.getElementById('coverPhoto').files[0];
-
-          if (profilePicture) formData.append('profilePicture', profilePicture);
-          if (coverPhoto) formData.append('coverPhoto', coverPhoto);
-
-          formData.append('fullName', document.getElementById('fullName').value);
-          formData.append('username', document.getElementById('username').value);
-          formData.append('bio', document.getElementById('bio').value);
-          formData.append('website', document.getElementById('website').value);
-          formData.append('email', document.getElementById('email').value);
-          formData.append('isPrivate', document.getElementById('isPrivate').checked);
-
-          const response = await fetch(`${API_URL}/users/profile`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: formData
-          });
-
-          const updatedProfile = await response.json();
-          this.profileData = { ...this.profileData, ...updatedProfile };
-          this.isEditing = false;
-          this.render();
-        } catch (error) {
-          console.error('Error updating profile:', error);
-        }
-      });
-
-      // Cancel edit
-      const cancelEdit = document.getElementById('cancelEdit');
-      if (cancelEdit) {
-        cancelEdit.addEventListener('click', () => {
-          this.isEditing = false;
-          this.render();
-        });
+      try {
+        const response = await api.put(`/api/users/${type}-picture`, formData);
+        this.user = response.data;
+        this.renderProfile();
+      } catch (error) {
+        console.error(`Error uploading ${type} picture:`, error);
+        alert(`Error uploading ${type} picture`);
       }
+    };
+    input.click();
+  }
+
+  openPost(post) {
+    // Create modal for viewing post
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="post">
+          <div class="post-header">
+            <img src="${this.user.profilePic || 'images/default-profile.png'}" alt="${this.user.username}">
+            <a href="profile.html?username=${this.user.username}">${this.user.username}</a>
+          </div>
+          <div class="post-image">
+            <img src="${post.image}" alt="${post.caption || ''}">
+          </div>
+          <div class="post-actions">
+            <button class="like-button ${post.isLiked ? 'active' : ''}">
+              <i class="fas fa-heart"></i>
+            </button>
+            <button class="comment-button">
+              <i class="fas fa-comment"></i>
+            </button>
+            <button class="share-button">
+              <i class="fas fa-share"></i>
+            </button>
+          </div>
+          <div class="post-likes">
+            ${post.likesCount} likes
+          </div>
+          <div class="post-caption">
+            <strong>${this.user.username}</strong> ${post.caption || ''}
+          </div>
+          <div class="post-comments">
+            <!-- Comments will be loaded here -->
+          </div>
+        </div>
+        <button class="btn" onclick="this.parentElement.parentElement.remove()">Close</button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Load comments
+    this.loadComments(post._id, modal.querySelector('.post-comments'));
+
+    // Add event listeners for like and comment
+    const likeBtn = modal.querySelector('.like-button');
+    likeBtn.addEventListener('click', () => this.handleLike(post._id, likeBtn));
+
+    const commentBtn = modal.querySelector('.comment-button');
+    commentBtn.addEventListener('click', () => {
+      const commentInput = document.createElement('input');
+      commentInput.type = 'text';
+      commentInput.placeholder = 'Add a comment...';
+      commentInput.onkeypress = (e) => {
+        if (e.key === 'Enter') {
+          this.handleComment(post._id, commentInput.value);
+          commentInput.value = '';
+        }
+      };
+      modal.querySelector('.post-comments').appendChild(commentInput);
+      commentInput.focus();
+    });
+  }
+
+  async loadComments(postId, container) {
+    try {
+      const response = await api.get(`/api/posts/${postId}/comments`);
+      container.innerHTML = response.data.map(comment => `
+        <div class="comment">
+          <strong>${comment.user.username}</strong> ${comment.content}
+        </div>
+      `).join('');
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    }
+  }
+
+  async handleLike(postId, button) {
+    try {
+      const response = await api.post(`/api/posts/${postId}/like`);
+      button.classList.toggle('active', response.data.isLiked);
+      button.closest('.post').querySelector('.post-likes').textContent = 
+        `${response.data.likesCount} likes`;
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  }
+
+  async handleComment(postId, content) {
+    try {
+      const response = await api.post(`/api/posts/${postId}/comments`, { content });
+      const commentEl = document.createElement('div');
+      commentEl.className = 'comment';
+      commentEl.innerHTML = `<strong>${auth.currentUser.username}</strong> ${content}`;
+      document.querySelector('.post-comments').appendChild(commentEl);
+    } catch (error) {
+      console.error('Error adding comment:', error);
     }
   }
 }

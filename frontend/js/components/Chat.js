@@ -12,9 +12,23 @@ class Chat {
     this.localStream = null;
     this.remoteStream = null;
     this.isInCall = false;
+    this.currentChat = null;
+    this.messageForm = document.getElementById('message-form');
+    this.messageInput = document.getElementById('message-input');
+    this.messagesContainer = document.getElementById('messages-container');
+    this.chatList = document.getElementById('chat-list');
+    this.emptyState = document.getElementById('empty-chat-state');
+    this.activeChatElement = document.getElementById('active-chat');
+    this.chatHeader = document.getElementById('chat-header');
+    this.newChatBtn = document.getElementById('new-chat-btn');
   }
 
   async init() {
+    if (!auth.isAuthenticated) {
+      window.location.href = 'index.html';
+      return;
+    }
+
     try {
       await this.setupWebSocket();
       await this.loadChats();
@@ -26,10 +40,9 @@ class Chat {
   }
 
   async setupWebSocket() {
-    // Initialize WebSocket connection
-    this.socket = new WebSocket(
-      `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
-    );
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    this.socket = new WebSocket(wsUrl);
 
     this.socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -55,16 +68,18 @@ class Chat {
           break;
       }
     };
+
+    this.socket.onclose = () => {
+      console.log('WebSocket connection closed');
+      setTimeout(() => this.setupWebSocket(), 5000);
+    };
   }
 
   async loadChats() {
     try {
-      const response = await fetch(`${API_URL}/chats`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      this.chats = await response.json();
+      const response = await api.get('/api/chats');
+      this.chats = response.data;
+      this.renderChatList();
     } catch (error) {
       console.error('Error loading chats:', error);
     }
@@ -75,15 +90,8 @@ class Chat {
 
     try {
       this.isLoadingMessages = true;
-      const response = await fetch(
-        `${API_URL}/chats/${chatId}/messages?page=${page}&limit=50`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
-      const newMessages = await response.json();
+      const response = await api.get(`/api/chats/${chatId}/messages?page=${page}&limit=50`);
+      const newMessages = response.data;
       
       this.messages = page === 1 
         ? newMessages 
@@ -129,39 +137,20 @@ class Chat {
   }
 
   renderChatList() {
-    if (this.chats.length === 0) {
-      return `
-        <div class="text-center py-xl text-secondary">
-          No conversations yet
+    this.chatList.innerHTML = '';
+    this.chats.forEach(chat => {
+      const chatEl = document.createElement('div');
+      chatEl.className = 'chat-item';
+      chatEl.innerHTML = `
+        <img src="${chat.otherUser.profilePic || 'images/default-profile.png'}" alt="${chat.otherUser.username}">
+        <div class="chat-info">
+          <h4>${chat.otherUser.username}</h4>
+          <p>${chat.lastMessage?.content || 'No messages yet'}</p>
         </div>
       `;
-    }
-
-    return this.chats.map(chat => `
-      <div class="chat-item ${this.activeChat?._id === chat._id ? 'active' : ''}" 
-           data-chat-id="${chat._id}">
-        <div class="chat-item-avatar">
-          ${chat.type === 'group' 
-            ? `<img src="${chat.groupPhoto || '/images/default-group.png'}" alt="${chat.name}">`
-            : `<img src="${this.getChatPartner(chat).profilePicture || '/images/default-avatar.jpg'}" 
-                    alt="${this.getChatPartner(chat).username}">`
-          }
-        </div>
-        
-        <div class="chat-item-content">
-          <div class="chat-item-header">
-            <h3>${chat.type === 'group' ? chat.name : this.getChatPartner(chat).username}</h3>
-            <span class="chat-item-time">
-              ${this.formatTime(chat.lastMessage?.createdAt)}
-            </span>
-          </div>
-          
-          <div class="chat-item-message">
-            ${chat.lastMessage ? this.renderLastMessage(chat.lastMessage) : 'No messages yet'}
-          </div>
-        </div>
-      </div>
-    `).join('');
+      chatEl.addEventListener('click', () => this.openChat(chat));
+      this.chatList.appendChild(chatEl);
+    });
   }
 
   renderActiveChat() {
@@ -370,17 +359,11 @@ class Chat {
         if (!content) return;
 
         try {
-          const response = await fetch(`${API_URL}/chats/${this.activeChat._id}/messages`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ content })
+          const response = await api.post(`/api/chats/${this.activeChat._id}/messages`, {
+            content
           });
 
-          const message = await response.json();
-          this.messages.push(message);
+          this.messages.push(response.data);
           this.render();
           input.value = '';
         } catch (error) {
@@ -407,16 +390,8 @@ class Chat {
           formData.append('contentType', file.type.startsWith('image/') ? 'image' : 'video');
 
           try {
-            const response = await fetch(`${API_URL}/chats/${this.activeChat._id}/messages`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              },
-              body: formData
-            });
-
-            const message = await response.json();
-            this.messages.push(message);
+            const response = await api.post(`/api/chats/${this.activeChat._id}/messages`, formData);
+            this.messages.push(response.data);
             this.render();
           } catch (error) {
             console.error('Error uploading file:', error);
@@ -466,6 +441,11 @@ class Chat {
       if (endCallBtn) {
         endCallBtn.addEventListener('click', this.endCall.bind(this));
       }
+    }
+
+    // New chat button
+    if (this.newChatBtn) {
+      this.newChatBtn.addEventListener('click', () => this.handleNewChat());
     }
   }
 
@@ -524,19 +504,12 @@ class Chat {
       await this.peerConnection.setLocalDescription(offer);
 
       // Send call request to server
-      const response = await fetch(`${API_URL}/chats/${this.activeChat._id}/call`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          type,
-          offer
-        })
+      const response = await api.post('/api/chats/call', {
+        type,
+        offer
       });
 
-      const call = await response.json();
+      const call = response.data;
       console.log('Call initiated:', call);
     } catch (error) {
       console.error('Error initiating call:', error);
@@ -603,28 +576,14 @@ class Chat {
         await this.peerConnection.setLocalDescription(answer);
 
         // Send call accepted response
-        await fetch(`${API_URL}/chats/${data.chatId}/call/${data.callId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            status: 'accepted',
-            answer
-          })
+        await api.put(`/api/chats/${data.chatId}/call/${data.callId}`, {
+          status: 'accepted',
+          answer
         });
       } else {
         // Send call rejected response
-        await fetch(`${API_URL}/chats/${data.chatId}/call/${data.callId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            status: 'rejected'
-          })
+        await api.put(`/api/chats/${data.chatId}/call/${data.callId}`, {
+          status: 'rejected'
         });
       }
     } catch (error) {
@@ -702,11 +661,8 @@ class Chat {
 
     // Notify server about call end
     if (this.activeChat) {
-      fetch(`${API_URL}/chats/${this.activeChat._id}/call/end`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      api.post('/api/chats/call/end', {
+        chatId: this.activeChat._id
       }).catch(error => {
         console.error('Error ending call:', error);
       });
@@ -714,9 +670,57 @@ class Chat {
   }
 
   handleNewMessage(message) {
-    if (message.chat === this.activeChat?._id) {
+    if (this.activeChat && message.chat === this.activeChat._id) {
       this.messages.push(message);
       this.render();
+    }
+  }
+
+  async openChat(chat) {
+    this.currentChat = chat;
+    this.emptyState.classList.add('hidden');
+    this.activeChatElement.classList.remove('hidden');
+
+    // Update chat header
+    this.chatHeader.innerHTML = `
+      <div class="chat-user">
+        <img src="${chat.otherUser.profilePic || 'images/default-profile.png'}" alt="${chat.otherUser.username}">
+        <h3>${chat.otherUser.username}</h3>
+      </div>
+      <div class="chat-actions">
+        <button class="btn btn-circle" id="video-call-btn">
+          <i class="fas fa-video"></i>
+        </button>
+        <button class="btn btn-circle" id="voice-call-btn">
+          <i class="fas fa-phone"></i>
+        </button>
+      </div>
+    `;
+
+    // Load messages
+    try {
+      await this.loadMessages(chat._id);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+
+    // Add call button listeners
+    document.getElementById('video-call-btn').addEventListener('click', () => this.initiateCall('video'));
+    document.getElementById('voice-call-btn').addEventListener('click', () => this.initiateCall('audio'));
+  }
+
+  async handleNewChat() {
+    const username = prompt('Enter username to start a chat:');
+    if (!username) return;
+
+    try {
+      const response = await api.post('/api/chats', { username });
+      this.chats.unshift(response.data);
+      this.renderChatList();
+      this.openChat(response.data);
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      alert('User not found or chat already exists');
     }
   }
 }

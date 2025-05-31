@@ -1,79 +1,97 @@
 // API Configuration
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8000/api'
-    : 'https://social-media-backend-fnjj.onrender.com/api';
+const API_URL = 'http://localhost:3000';
 
 const UPLOADS_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
     : 'https://social-media-backend-fnjj.onrender.com';
 
-class ApiService {
+class Api {
     constructor() {
-        this.token = localStorage.getItem('token');
+        this.baseUrl = API_URL;
     }
 
-    setToken(token) {
-        this.token = token;
-        localStorage.setItem('token', token);
-    }
-
-    clearToken() {
-        this.token = null;
-        localStorage.removeItem('token');
+    getHeaders() {
+        const token = localStorage.getItem('token');
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+        };
     }
 
     async request(endpoint, options = {}) {
-        const url = `${API_URL}${endpoint}`;
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(this.token && { Authorization: `Bearer ${this.token}` }),
-            ...options.headers
-        };
+        const url = `${this.baseUrl}${endpoint}`;
+        const headers = this.getHeaders();
 
         try {
             const response = await fetch(url, {
                 ...options,
-                headers,
-                credentials: 'include',
-                mode: 'cors'
+                headers: {
+                    ...headers,
+                    ...options.headers
+                }
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                console.error('API Error Response:', error);
-                throw new Error(error.message || 'Something went wrong');
+                if (response.status === 401) {
+                    // Token expired or invalid
+                    localStorage.removeItem('token');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            return { data };
         } catch (error) {
-            console.error('API Request Error:', {
-                url,
-                method: options.method || 'GET',
-                error: error.message,
-                stack: error.stack
-            });
+            console.error('API request failed:', error);
             throw error;
         }
     }
 
-    // Auth endpoints
-    async register(userData) {
-        return this.request('/users/register', {
-            method: 'POST',
-            body: JSON.stringify(userData)
+    // GET request
+    async get(endpoint) {
+        return this.request(endpoint, {
+            method: 'GET'
         });
     }
 
-    async login(credentials) {
-        return this.request('/users/login', {
+    // POST request
+    async post(endpoint, body) {
+        return this.request(endpoint, {
             method: 'POST',
-            body: JSON.stringify(credentials)
+            body: JSON.stringify(body)
         });
+    }
+
+    // PUT request
+    async put(endpoint, body) {
+        return this.request(endpoint, {
+            method: 'PUT',
+            body: body instanceof FormData ? body : JSON.stringify(body),
+            headers: body instanceof FormData ? {} : undefined
+        });
+    }
+
+    // DELETE request
+    async delete(endpoint) {
+        return this.request(endpoint, {
+            method: 'DELETE'
+        });
+    }
+
+    // Auth endpoints
+    async register(userData) {
+        return this.post('/users/register', userData);
+    }
+
+    async login(credentials) {
+        return this.post('/users/login', credentials);
     }
 
     // Post endpoints
     async getFeed() {
-        return this.request('/posts/feed');
+        return this.get('/posts/feed');
     }
 
     async createPost(formData) {
@@ -82,7 +100,7 @@ class ApiService {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${this.token}`
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
                 },
                 body: formData,
                 credentials: 'include',

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - InstaClone</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-wrapper">
+            <div class="logo">
+                <a href="index.html">InstaClone</a>
+            </div>
+            <div class="nav-items" id="nav-items">
+                <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+                <a href="chat.html" class="nav-link"><i class="fas fa-comments"></i> Chat</a>
+                <a href="upload.html" class="nav-link"><i class="fas fa-plus-square"></i> Upload</a>
+                <a href="profile.html" class="nav-link active"><i class="fas fa-user"></i> Profile</a>
+                <a href="#" class="nav-link" id="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="profile-header">
+                <div class="profile-cover">
+                    <img src="images/default-cover.jpg" alt="Cover" id="cover-pic">
+                </div>
+                <div class="profile-info">
+                    <div class="profile-image">
+                        <img src="images/default-profile.png" alt="Profile" id="profile-pic">
+                    </div>
+                    <div class="profile-details">
+                        <h2 id="profile-username"></h2>
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="posts-count">0</span>
+                                <span class="stat-label">posts</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="followers-count">0</span>
+                                <span class="stat-label">followers</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="following-count">0</span>
+                                <span class="stat-label">following</span>
+                            </div>
+                        </div>
+                        <p id="profile-bio"></p>
+                        <div class="profile-actions">
+                            <button class="btn btn-primary" id="edit-profile-btn">Edit Profile</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-content">
+                <div class="profile-tabs">
+                    <button class="tab active" data-tab="posts">
+                        <i class="fas fa-th"></i> Posts
+                    </button>
+                    <button class="tab" data-tab="saved">
+                        <i class="fas fa-bookmark"></i> Saved
+                    </button>
+                    <button class="tab" data-tab="tagged">
+                        <i class="fas fa-user-tag"></i> Tagged
+                    </button>
+                </div>
+                <div class="posts-grid" id="profile-posts">
+                    <!-- Posts will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/components/Profile.js"></script>
+    <script>
+        // Initialize profile
+        document.addEventListener('DOMContentLoaded', () => {
+            const profile = new Profile();
+            // Get username from URL or use current user's username
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('username') || auth.currentUser?.username;
+            if (username) {
+                profile.init(username);
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html> 
