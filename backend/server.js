@@ -14,12 +14,21 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://social-meadia.vercel.app', 'https://social-media-frontend-fnjj.vercel.app']
+    ? [
+        'https://social-meadia.vercel.app',
+        'https://social-media-frontend-fnjj.vercel.app',
+        'https://social-meadia-zg52-fyoplnw1j-ashishs-projects-9530e095.vercel.app',
+        /\.vercel\.app$/  // Allow all Vercel preview domains
+      ]
     : ['http://localhost:8080', 'http://127.0.0.1:8080'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Access-Control-Allow-Origin']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Handle JSON and URL-encoded data for non-multipart requests
 app.use((req, res, next) => {

@@ -34,17 +34,24 @@ class ApiService {
             const response = await fetch(url, {
                 ...options,
                 headers,
-                credentials: 'include'
+                credentials: 'include',
+                mode: 'cors'
             });
 
             if (!response.ok) {
                 const error = await response.json();
+                console.error('API Error Response:', error);
                 throw new Error(error.message || 'Something went wrong');
             }
 
             return await response.json();
         } catch (error) {
-            console.error('API Error:', error);
+            console.error('API Request Error:', {
+                url,
+                method: options.method || 'GET',
+                error: error.message,
+                stack: error.stack
+            });
             throw error;
         }
     }
@@ -77,17 +84,23 @@ class ApiService {
                 headers: {
                     Authorization: `Bearer ${this.token}`
                 },
-                body: formData
+                body: formData,
+                credentials: 'include',
+                mode: 'cors'
             });
 
             if (!response.ok) {
                 const error = await response.json();
+                console.error('Post Creation Error:', error);
                 throw new Error(error.message || 'Error creating post');
             }
 
             return await response.json();
         } catch (error) {
-            console.error('Create post error:', error);
+            console.error('Create Post Error:', {
+                error: error.message,
+                stack: error.stack
+            });
             throw error;
         }
     }
