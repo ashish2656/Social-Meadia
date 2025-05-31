@@ -1,4 +1,5 @@
 # Social Media Platform
+Live Server Link -> social-meadia-zg52.vercel.app
 
 A full-stack social media application similar to Instagram, built with vanilla JavaScript, Express.js, and MongoDB.
 
